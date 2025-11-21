@@ -5,16 +5,19 @@ Exercise 2 Baseline Script
 - To be completed by attendees
 """
 
-# Example XML payload for eth0 IPv4 address (to be used in edit-config)
+from ncclient import manager
+from lxml import etree
+
+# Example XML payload for eth0 IPv4 address (used in edit-config)
 EDIT_CONFIG_TEMPLATE = '''
-<config>
+<config xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
     <interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces">
         <interface>
             <name>eth0</name>
             <ipv4 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip">
                 <address>
                     <ip>{ip}</ip>
-                    <netmask>{netmask}</netmask>
+                    <prefix-length>{netmask}</prefix-length>
                 </address>
             </ipv4>
         </interface>
@@ -22,12 +25,11 @@ EDIT_CONFIG_TEMPLATE = '''
 </config>
 '''
 
-from ncclient import manager
-
 # List of device connection details (to be filled by attendees)
 devices = [
     # Example:
-    # {"host": "127.0.0.1", "port": 830, "username": "admin", "password": "admin", "eth0": {"ip": "192.168.1.10", "netmask": "255.255.255.0"}},
+    # {"host": "127.0.0.1", "port": 830, "username": "admin", "password": "admin", "eth0": {"ip": "192.168.1.51", "prefix-length": "24"}},
+    # ...
 ]
 
 def connect_device(device):
@@ -42,9 +44,9 @@ def connect_device(device):
             allow_agent=False,
             look_for_keys=False,
             timeout=10
-        ) as m:
-            print(f"Connected to {device['host']}")
-            return m
+        ) 
+        print(f"Connected to {device['host']}:{device['port']}")
+        return m
     except Exception as e:
         print(f"Failed to connect to {device['host']}: {e}")
         return None
@@ -53,7 +55,7 @@ def edit_config_stub(m, eth0):
     """
     Stub for edit-config operation. To be implemented.
     eth0 is a dict with 'ip' and 'netmask'.
-    Use EDIT_CONFIG_TEMPLATE.format(ip=eth0.get('ip'), netmask=eth0.get('netmask')) to generate the XML payload.
+    Use config_xml = EDIT_CONFIG_TEMPLATE.format(ip=eth0.get('ip'), netmask=eth0.get('prefix-length')) to generate the XML payload.
     """
     pass
 
@@ -69,6 +71,7 @@ def main():
             eth0 = device.get("eth0", {})
             edit_config_stub(m, eth0)
             get_config_stub(m)
+            m.close_session()
 
 if __name__ == "__main__":
     main()
