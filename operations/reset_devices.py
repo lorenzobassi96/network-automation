@@ -89,7 +89,7 @@ def main():
         print("All devices are now clean!")
     
     print("\nTo fully restore original configurations:")
-    print("docker-compose restart")
+    print("sudo podman compose restart")
 
 if __name__ == '__main__':
     main()

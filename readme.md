@@ -18,54 +18,164 @@
 
 ## Setup
 
+
+### WSL Setup on Windows (PowerShell)
+
+Run the following commands from **PowerShell** on Windows.
+
+1. List available Linux distributions:
+
+```powershell
+wsl --list --online
+```
+
+Example output:
+
+```text
+The following is a list of valid distributions that can be installed.
+Install using 'wsl.exe --install <Distro>'.
+
+NAME                            FRIENDLY NAME
+Ubuntu                          Ubuntu
+Debian                          Debian GNU/Linux
+FedoraLinux-44                  Fedora Linux 44
+...
+```
+
+2. Install WSL and Debian:
+
+```powershell
+wsl --install -d Debian
+```
+
+If WSL is already installed, ensure WSL2 is the default:
+
+```powershell
+wsl --set-default-version 2
+```
+
+3. Update the WSL kernel (recommended):
+
+```powershell
+wsl --update
+```
+
+4. Verify installation status:
+
+```powershell
+wsl --status
+wsl -l -v
+```
+
+Example output:
+
+```text
+Default Distribution: Debian
+Default Version: 2
+
+NAME      STATE    VERSION
+* Debian  Stopped  2
+```
+
+5. Start Debian:
+
+```powershell
+wsl -d Debian
+```
+
+At first startup, Debian will ask you to create a Linux username and password.
+
+Quick checks inside Debian:
+Suggestion: install [Windows Terminal](https://aka.ms/terminal) for a better WSL experience.
+
+```bash
+cat /etc/os-release
+python3 --version
+```
+
+6. Stop WSL when needed:
+
+```powershell
+wsl --shutdown
+```
+
+7. Check whether Debian is stopped or running:
+
+```powershell
+wsl -l -v
+```
+
+Example output when running:
+
+```text
+NAME      STATE    VERSION
+* Debian  Running  2
+```
+
+
 ### 1. Prerequisites
 
 You need the following tools installed on your system (any Linux distribution, including WSL, macOS, or native):
 
-- **Docker** 
-- **Docker Compose**
+- **Podman**
+- **Podman Compose** (`podman-compose`; some Podman versions also support the built-in `podman compose` subcommand, but not all — if `podman compose` gives `unrecognized command`, just use `podman-compose` instead)
 - **Python 3** and **pip3**
 - **Ansible**
 - **Python packages:** `ncclient`, `netconf-console2`, `paramiko`
 
 
 **For WSL users:**
-In case Docker is not already installed, you have two options for Docker setup:
+This lab runs with **Podman in rootful mode** (all `podman` commands are executed with `sudo`).
+Rootful mode avoids the rootless low-port (830/831/832) binding limitations.
 
-1. **Docker Desktop for Windows (Slower, but recommended for entry-level users):**
-    - Install [Docker Desktop for Windows](https://docs.docker.com/desktop/install/windows-install/) and ensure it is running.
-    - Enable WSL2 integration in Docker Desktop settings.
-    - This is the most seamless experience and is required if you want to use GUI tools, volume mounts, or need full Windows integration.
+Install Podman directly inside your WSL distribution using its package manager:
 
-2. **Native Docker inside WSL Linux (Recommended native integration in the distro, but for advanced users):**
-    - You can install Docker directly in your WSL distribution using your package manager (e.g., `sudo apt install docker.io` for Ubuntu).
-    - Depending on the distro you might need to manually start the Docker daemon (e.g., `sudo service docker start`) each session, and handle permissions yourself.
+```bash
+# Debian / Ubuntu
+sudo apt update
+sudo apt install -y podman podman-compose python3-pip git vim tmux
+```
+
+Notes:
+- Podman is daemonless, so there is no service to start.
+- `podman-compose` provides `docker-compose`-like behavior; alternatively the native `podman compose` command can be used if the compose provider is available on your system (requires a recent Podman with the compose plugin installed). If you get `Error: unrecognized command "podman compose"`, your Podman install doesn't have it — just use `podman-compose` instead.
 
 ### 2. Install Required Tools
 
 Install the above tools using your distribution's package manager or download from the official websites:
 
-- [Docker installation guide](https://docs.docker.com/get-docker/)
-- [Docker Compose installation](https://docs.docker.com/compose/install/)
+- [Podman installation guide](https://podman.io/docs/installation)
+- [podman-compose installation](https://github.com/containers/podman-compose)
 - [Python downloads](https://www.python.org/downloads/)
 - [Ansible installation guide](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html)
 
 **Install Python dependencies:**
+
+On Debian/Ubuntu, `pip3 install --user` may fail with `externally-managed-environment` (PEP 668).
+To install system-wide anyway (skip the virtual environment), pass `--break-system-packages`:
+
 ```bash
-pip3 install --user ncclient netconf-console2 paramiko ansible
+pip3 install --user --break-system-packages ncclient netconf-console2 paramiko ansible six
 ```
 
-### 3. (Optional) Add Your User to the Docker Group (for non-root usage)
+`--user` installs executables (like `ansible`, `netconf-console2`) into `~/.local/bin`, which may not be in your `PATH` yet. If running `ansible` (or similar) gives `command not found`, add it to your `PATH`:
+
 ```bash
-sudo usermod -aG docker $USER
-# Then restart your shell or run: exec su -l $USER
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
 ```
+
+
+### 3. Rootful Podman
+
+This lab uses **rootful Podman**, so container commands are prefixed with `sudo`.
+No user/group setup is required (unlike Docker's `docker` group).
 
 ### 4. Verify Installations
 
 ```bash
-docker --version
-docker compose version   # or: docker-compose --version
+sudo podman --version
+podman-compose --version   # or, if available: sudo podman compose version
 python3 --version
 pip3 --version
 ansible --version
@@ -73,21 +183,21 @@ netconf-console2 --help  # should print help if installed
 ```
 
 ### 5. Start the Lab Environment
-
+################################################### To Be changed later when repo is ready
 Download the repo:
 ```bash
 git clone https://github.com/unusualfor/network-automation.git
 cd network-automation/
 ```
 
-Depending on your Docker Compose version, use one of the following:
+Start the lab with Podman (rootful) using one of the following:
 
 ```bash
-# For docker-compose v1
-docker-compose up
+# Using podman-compose (works on all Podman installs)
+sudo podman-compose up
 
-# For docker-compose v2 (recommended)
-docker compose up
+# Or, if your Podman install has the compose plugin, the native subcommand also works
+sudo podman compose up
 ```
 
 ## Exercise 1
@@ -150,7 +260,7 @@ Activities:
 Start by restarting the system with 
 
 ```bash
-docker compose restart
+sudo podman-compose restart   # or: sudo podman compose restart (if available)
 ```
 
 Create a python script that makes use of [ncclient](https://pypi.org/project/ncclient/) to perform the following: 
@@ -173,7 +283,7 @@ Activities:
 Start by restarting the system with 
 
 ```bash
-docker compose restart
+sudo podman-compose restart   # or: sudo podman compose restart (if available)
 ```
 
 1. Look at the files inside *ansible* folder
@@ -198,7 +308,7 @@ Activities:
 Start by restarting the system with 
 
 ```bash
-docker compose restart
+sudo podman-compose restart   # or: sudo podman compose restart (if available)
 ```
 
 Create a python script that makes use of [ncclient](https://pypi.org/project/ncclient/) to perform the following tasks. Feel free to reuse any code already available while making sure to comment the different functions. 
@@ -233,6 +343,12 @@ Activities:
     - Ensure the device is running and reachable from your host.
 - **ncclient not installed:**
     - Run `pip3 install ncclient`.
+- **`externally-managed-environment` error when running `pip3 install`:**
+    - Debian/Ubuntu blocks system-wide pip installs (PEP 668). Add `--break-system-packages` to the `pip3 install` command.
+- **`command not found` for `ansible`, `netconf-console2`, etc. after `pip3 install --user`:**
+    - `~/.local/bin` is not in your `PATH`. Run `echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc`.
+- **`ModuleNotFoundError: No module named 'six'` when running `netconf-console2`:**
+    - `netconf-console2` depends on `six` but it is not always pulled in automatically. Run `pip3 install --user --break-system-packages six`.
 - **netconf-console2 not found:**
     - Run `pip3 install netconf-console2` or check your PATH.
 - **Ansible errors:**
