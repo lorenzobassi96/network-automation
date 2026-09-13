@@ -1,0 +1,15 @@
+---
+# Execution Environment definition for ansible-builder (schema v3).
+# Build with:  ansible-builder build -t netconf-ee -f execution-environment.yml
+version: 3
+
+images:
+  base_image:
+    # Minimal community EE: ships ansible-core + python, no collections
+    name: ghcr.io/ansible-community/community-ee-minimal:latest
+
+dependencies:
+  # Python libraries needed by the NETCONF modules (ncclient, jxmlease, ...)
+  python: requirements.txt
+  # Ansible collections (ansible.netcommon, ansible.posix)
+  galaxy: requirements.yml

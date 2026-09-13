@@ -1,0 +1,17 @@
+---
+# ansible-navigator configuration.
+# Runs the playbook inside the 'netconf-ee' execution environment built by
+# ansible-builder. Host networking lets the EE reach the NETCONF devices on
+# localhost:830-832 (published by the root docker-compose.yml).
+ansible-navigator:
+  execution-environment:
+    enabled: true
+    image: netconf-ee:latest
+    container-engine: podman
+    pull:
+      policy: missing
+    container-options:
+      - "--net=host"
+  mode: stdout
+  playbook-artifact:
+    enable: false

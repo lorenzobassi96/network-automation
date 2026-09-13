@@ -8,6 +8,10 @@ This directory contains an Ansible playbook that configures 3 network devices wi
 - `network_automation.yml` - Main playbook with all operations
 - `README.md` - This file
 - `ansible.cfg` - Ansible configuration (optional)
+- `execution-environment.yml` - Execution Environment definition for `ansible-builder`
+- `ansible-navigator.yml` - `ansible-navigator` config (EE image, podman, host network)
+- `requirements.txt` - Python dependencies (ncclient, jxmlease, lxml, paramiko)
+- `requirements.yml` - Ansible collection dependencies (ansible.netcommon, ansible.posix)
 
 ## 🔑 Key Differences between Python and Ansible
 
@@ -42,6 +46,11 @@ pip install ncclient
 ```bash
 pip install ansible ansible-netcommon
 ansible-galaxy collection install ansible.netcommon
+
+# Python libraries used by the NETCONF modules:
+#   ncclient  -> NETCONF transport
+#   jxmlease  -> required by `display: json` to parse device output into a dict
+pip install ncclient jxmlease
 ```
 
 ## 🎯 Educational Highlights
@@ -62,22 +71,134 @@ Ansible has native NETCONF modules (`ansible.netcommon.netconf_config`, `netconf
 - **Python (Imperative)**: "Connect to device, then change this IP, then close connection"
 - **Ansible (Declarative)**: "Ensure this interface has this IP address"
 
-## 🚀 Advanced Usage
+## 🚀 Usage & Examples
 
-### Run on subset of devices:
+### Run on ALL devices (RAN, Router, Core):
+The play targets `hosts: devices`, so a single command runs on all three devices in the group.
 ```bash
-ansible-playbook -i inventory.yml network_automation.yml --tags=auto --limit=RAN,Router
+# Apply the pre-defined IP configuration to every device
+ansible-playbook -i inventory.yml network_automation.yml --tags=auto
+
+# Show the current configuration of every device
+ansible-playbook -i inventory.yml network_automation.yml --tags=show
 ```
 
+### List which hosts would run (without changing anything):
+Useful to confirm the playbook targets all three devices before executing.
+```bash
+ansible-playbook -i inventory.yml network_automation.yml --tags=auto --list-hosts
+```
+Example output:
+```text
+playbook: network_automation.yml
+
+  play #1 (devices): Network Automation TAGS: []
+    pattern: ['devices']
+    hosts (3):
+      Router
+      Core
+      RAN
+
+  play #2 (devices): 📊 Configuration Summary   TAGS: [never,auto]
+    pattern: ['devices']
+    hosts (3):
+      Router
+      Core
+      RAN
+```
+
+### Target a single device:
+Use `--limit` to restrict execution to one host.
+```bash
+# Only RAN
+ansible-playbook -i inventory.yml network_automation.yml --tags=auto --limit RAN
+
+# Only Core
+ansible-playbook -i inventory.yml network_automation.yml --tags=show --limit Core
+```
+
+### Target a subset of devices:
+```bash
+ansible-playbook -i inventory.yml network_automation.yml --tags=auto --limit "RAN,Router"
+```
+
+### Override parameters (change a specific interface):
+The `change` tag takes parameters via `-e` (extra vars) to configure a single interface on a single device.
+```bash
+ansible-playbook -i inventory.yml network_automation.yml --tags=change \
+  -e "target_device=RAN target_interface=backhaul0 target_ip=10.2.1.1 target_prefix=30"
+```
+- `target_device`   → host to configure (must match an inventory hostname)
+- `target_interface`→ interface name to change
+- `target_ip`       → new IPv4 address
+- `target_prefix`   → prefix length (optional, defaults to 30)
+
 ### Dry run (check mode):
+Simulates changes without applying them.
 ```bash
 ansible-playbook -i inventory.yml network_automation.yml --tags=auto --check
 ```
 
 ### Verbose output:
+Add `-v`, `-vv`, or `-vvv` for increasing levels of detail (NETCONF debugging).
 ```bash
 ansible-playbook -i inventory.yml network_automation.yml --tags=show -vvv
 ```
+
+## 🐳 Run with an Execution Environment (ansible-builder + ansible-navigator)
+
+Instead of installing Ansible and its dependencies locally, the playbook can run
+inside a self-contained **Execution Environment (EE)**. The EE is defined by
+`execution-environment.yml`, built with **ansible-builder**, and run with
+**ansible-navigator** (configured in `ansible-navigator.yml`).
+
+The EE bundles everything: ansible-core, the `ansible.netcommon` / `ansible.posix`
+collections, and the Python NETCONF libraries (`ncclient`, `jxmlease`, ...).
+
+> The NETCONF devices are started by the root `docker-compose.yml` and expose
+> ports `830/831/832` on the host. `ansible-navigator.yml` already runs the EE
+> with `--net=host` so the inventory targets (`localhost:830-832`) are reachable.
+>
+> These examples use **podman** (set in `ansible-navigator.yml`).
+
+### 1. Install the tooling (once):
+```bash
+pip install ansible-builder ansible-navigator
+```
+
+### 2. Start the devices (from the repository root):
+```bash
+podman compose up -d
+```
+
+### 3. Build the execution environment (from this `ansible/` folder):
+```bash
+ansible-builder build -t netconf-ee -f execution-environment.yml --container-runtime podman
+```
+
+### 4. Run the playbook with ansible-navigator:
+`ansible-navigator.yml` selects the `netconf-ee` image automatically, so you only
+pass the playbook and its arguments. `--mode stdout` prints plain output (drop it
+to use the interactive TUI).
+```bash
+# Show current configuration on all devices
+ansible-navigator run network_automation.yml -i inventory.yml --tags show --mode stdout
+
+# Apply the automatic IP configuration on all devices
+ansible-navigator run network_automation.yml -i inventory.yml --tags auto --mode stdout
+
+# Target a single device
+ansible-navigator run network_automation.yml -i inventory.yml --tags show --limit RAN --mode stdout
+
+# Override parameters (change a specific interface)
+ansible-navigator run network_automation.yml -i inventory.yml --tags change --mode stdout \
+  -e "target_device=RAN target_interface=backhaul0 target_ip=10.2.1.1 target_prefix=30"
+```
+
+> **Docker Desktop (macOS/Windows):** `--net=host` is not supported. Set
+> `container-engine: docker` in `ansible-navigator.yml`, remove the `--net=host`
+> container option, attach the EE to the compose network instead
+> (`--net=telco-net`), and target the device container names.
 
 ## 🔍 What's the Same?
 

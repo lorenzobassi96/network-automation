@@ -200,13 +200,157 @@ sudo podman-compose up
 sudo podman compose up
 ```
 
+Check that all containers are running:
+```bash
+sudo podman ps                                                      BLQ00560LT: Sun Sep 13 11:17:26 2026
+
+CONTAINER ID  IMAGE                                COMMAND               CREATED        STATUS                  PORT
+S                 NAMES
+9d3d35a4b8be  ghcr.io/notconf/notconf:14265929521  /bin/sh -c /run.s...  4 minutes ago  Up 4 minutes (healthy)  0.0.
+0.0:830->830/tcp  ran-device
+e766e8a33b54  ghcr.io/notconf/notconf:14265929521  /bin/sh -c /run.s...  4 minutes ago  Up 4 minutes (healthy)  0.0.
+0.0:831->830/tcp  router-device
+d14d68a976ca  ghcr.io/notconf/notconf:14265929521  /bin/sh -c /run.s...  4 minutes ago  Up 4 minutes (healthy)  0.0.
+0.0:832->830/tcp  core-device
+```
+
+Check host ports:
+```bash
+sudo podman port ran-device
+830/tcp -> 0.0.0.0:830
+
+sudo podman port router-device
+830/tcp -> 0.0.0.0:831
+
+sudo podman port core-device
+830/tcp -> 0.0.0.0:832
+```
+
+Check the initial configuration of the devices:
+N.B: It's expected that there will be errors in the network consistency check initially. These errors should be resolved as you configure the network devices correctly.
+```bash
+python3 network_check.py
+================================================================================
+🔍 Network Consistency Check - 2026-09-13 16:51:42
+================================================================================
+📡 Device Status:
+   RAN      (localhost:830): ✅ Connected - 4 interfaces
+   Router   (localhost:831): ✅ Connected - 4 interfaces
+   Core     (localhost:832): ✅ Connected - 4 interfaces
+
+🔗 Network Link Status:
+   Network A (RAN-Router Backhaul)     ❌ ERROR Different networks: 10.0.1.0/30 vs 10.0.10.0/30
+   Network B (Router-Core)             ❌ ERROR Different networks: 10.0.200.0/30 vs 10.0.172.0/30
+   Management Network                  ❌ ERROR Different networks: 192.168.1.0/24 vs 192.168.100.0/24
+   Management Network (Router-Core)    ⚠️  WARNING Unexpected network: 192.168.100.0/24 (expected 192.168.1.0/24)
+
+📋 Interface Details:
+   📱 RAN:
+      backhaul0    🟢 10.0.1.1/30         (Backhaul to router)
+      eth0         🟢 192.168.1.10/24     (Management interface)
+      lo0          🟢 127.0.0.1/32        (Loopback interface)
+      radio0       🟢 No IP               (5G NR radio interface)
+   📱 Router:
+      eth0         🟢 192.168.100.20/24   (Management interface)
+      eth1         🟢 10.0.10.2/30        (Interface to RAN)
+      eth2         🟢 10.0.200.1/30       (Interface to Core)
+      lo0          🟢 127.0.0.1/32        (Loopback interface)
+   📱 Core:
+      eth0         🟢 192.168.100.30/24   (Management interface)
+      eth1         🟢 10.0.172.2/30       (Interface to Router)
+      eth2         🟢 203.0.113.1/24      (Interface to Internet/External)
+      lo0          🟢 127.0.0.1/32        (Loopback interface)
+```
+
 ## Exercise 1
 
 ### Check initial configuration
 
 Once everything is up and running, check the current configuration for the *running*, *startup* and *candidate* datastores using [*netconf-console2*](https://pypi.org/project/netconf-console2/) with *--get-config*.
+Check the initial configuration of the devices:
+```bash
+netconf-console2 --host localhost --port 830 --user admin --password admin --db running --get-config
+netconf-console2 --host localhost --port 831 --user admin --password admin --db running --get-config
+netconf-console2 --host localhost --port 832 --user admin --password admin --db running --get-config
+```
 
-1. Are there differences between the datastores? Why?
+Save the initial configuration of the devices to XML files for later reference:
+```bash
+netconf-console2 --host localhost --port 830 --user admin --password admin --db running --get-config > ran-device-config.xml
+netconf-console2 --host localhost --port 831 --user admin --password admin --db running --get-config > router-device-config.xml
+netconf-console2 --host localhost --port 832 --user admin --password admin --db running --get-config > core-device-config.xml
+
+netconf-console2 --host localhost --port 830 --user admin --password admin --db running --get-config -x /interfaces/interface > ran-interfaces-before-change.xml
+netconf-console2 --host localhost --port 831 --user admin --password admin --db running --get-config -x /interfaces/interface > router-interfaces-before-change.xml
+netconf-console2 --host localhost --port 832 --user admin --password admin --db running --get-config -x /interfaces/interface > core-interfaces-before-change.xml
+```
+
+```bash
+diff ran-device-config.xml router-device-config.xml -y --suppress-common-lines
+      <name>backhaul0</name>                                  |       <name>eth0</name>
+      <description>Backhaul to router</description>           |       <description>Management interface</description>
+          <ip>10.0.1.1</ip>                                   |           <ip>192.168.100.20</ip>
+                                                              >           <prefix-length>24</prefix-length>
+                                                              >         </address>
+                                                              >       </ipv4>
+                                                              >     </interface>
+                                                              >     <interface>
+                                                              >       <name>eth1</name>
+                                                              >       <description>Interface to RAN</description>
+                                                              >       <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-i
+                                                              >       <enabled>true</enabled>
+                                                              >       <ipv4 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip">
+                                                              >         <enabled>true</enabled>
+                                                              >         <address>
+                                                              >           <ip>10.0.10.2</ip>
+      <name>eth0</name>                                       |       <name>eth2</name>
+      <description>Management interface</description>         |       <description>Interface to Core</description>
+          <ip>192.168.100.10</ip>                             |           <ip>10.0.200.1</ip>
+          <prefix-length>24</prefix-length>                   |           <prefix-length>30</prefix-length>
+    </interface>                                              <
+    <interface>                                               <
+      <name>radio0</name>                                     <
+      <description>5G NR radio interface</description>        <
+      <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-i <
+      <enabled>true</enabled>                                 <
+
+
+diff router-device-config.xml core-device-config.xml -y --suppress-common-lines
+          <ip>192.168.100.20</ip>                             |           <ip>192.168.100.30</ip>
+      <description>Interface to RAN</description>             |       <description>Interface to Router</description>
+          <ip>10.0.10.2</ip>                                  |           <ip>10.0.172.2</ip>
+      <description>Interface to Core</description>            |       <description>Interface to Internet/External</descriptio
+          <ip>10.0.200.1</ip>                                 |           <ip>203.0.113.1</ip>
+          <prefix-length>30</prefix-length>                   |           <prefix-length>24</prefix-length>
+
+
+
+diff ran-device-config.xml core-device-config.xml -y --suppress-common-lines
+      <name>backhaul0</name>                                  |       <name>eth0</name>
+      <description>Backhaul to router</description>           |       <description>Management interface</description>
+          <ip>10.0.1.1</ip>                                   |           <ip>192.168.100.30</ip>
+                                                              >           <prefix-length>24</prefix-length>
+                                                              >         </address>
+                                                              >       </ipv4>
+                                                              >     </interface>
+                                                              >     <interface>
+                                                              >       <name>eth1</name>                                                                                           >       <description>Interface to Router</description>
+                                                              >       <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-i
+                                                              >       <enabled>true</enabled>
+                                                              >       <ipv4 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip">
+                                                              >         <enabled>true</enabled>
+                                                              >         <address>
+                                                              >           <ip>10.0.172.2</ip>
+      <name>eth0</name>                                       |       <name>eth2</name>
+      <description>Management interface</description>         |       <description>Interface to Internet/External</descriptio
+          <ip>192.168.100.10</ip>                             |           <ip>203.0.113.1</ip>
+    </interface>                                              <
+    <interface>                                               <
+      <name>radio0</name>                                     <
+      <description>5G NR radio interface</description>        <
+      <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-i <
+      <enabled>true</enabled>                                 <
+```
 
 ### Modify running datastore
 
@@ -219,10 +363,98 @@ Copy and modify the file in *operations/change-eth0.xml* and use it to perform t
 Activities:
 * Check with *netconf-console2* with *--get-config*, towards *running*, *startup* and *candidate*
     * Would the current configuration allow the system to work properly?
-    * Are there differences between the datastores? Why? 
-    * What would happen if a device gets restarted in such a case?
-    * What would happen to the network if the configuration applied to BBU backhaul0 was not matching the network configuration applied to Router eth1? Was there any check available to prevent this?
-* Further checks: check that the three devices have consistent IP addresses with the *network-check.py* script and, in case not, modify IP addresses again
+        * Are there differences between the datastores? Why? 
+            * What would happen if a device gets restarted in such a case?
+                * What would happen to the network if the configuration applied to BBU backhaul0 was not matching the network configuration applied to Router eth1? Was there any check available to prevent this?
+                * Further checks: check that the three devices have consistent IP addresses with the *network-check.py* script and, in case not, modify IP addresses again
+
+```bash
+netconf-console2 --host localhost --port 830 --user admin --password admin --db running --edit-config operations/exercise1-running-ran.xml
+netconf-console2 --host localhost --port 831 --user admin --password admin --db running --edit-config operations/exercise1-running-router.xml
+netconf-console2 --host localhost --port 832 --user admin --password admin --db running --edit-config operations/exercise1-running-core.xml
+```
+Check differences between the configurations:
+```bash
+netconf-console2 --host localhost --port 830 --user admin --password admin --db running --get-config -x /interfaces/interface > ran-interfaces-after-change.xml
+netconf-console2 --host localhost --port 831 --user admin --password admin --db running --get-config -x /interfaces/interface > router-interfaces-after-change.xml
+netconf-console2 --host localhost --port 832 --user admin --password admin --db running --get-config -x /interfaces/interface > core-interfaces-after-change.xml
+
+diff ran-interfaces-before-change.xml ran-interfaces-after-change.xml
+diff router-interfaces-before-change.xml router-interfaces-after-change.xml
+diff core-interfaces-before-change.xml core-interfaces-after-change.xml
+```
+
+Check *running*, *startup* and *candidate* datastores for each device and save the output into the *exercise1* folder:
+```bash
+# RAN (port 830)
+netconf-console2 --host localhost --port 830 --user admin --password admin --db running   --get-config -x /interfaces/interface > exercise1/ran-running.xml
+netconf-console2 --host localhost --port 830 --user admin --password admin --db startup   --get-config -x /interfaces/interface > exercise1/ran-startup.xml
+netconf-console2 --host localhost --port 830 --user admin --password admin --db candidate --get-config -x /interfaces/interface > exercise1/ran-candidate.xml
+
+# Router (port 831)
+netconf-console2 --host localhost --port 831 --user admin --password admin --db running   --get-config -x /interfaces/interface > exercise1/router-running.xml
+netconf-console2 --host localhost --port 831 --user admin --password admin --db startup   --get-config -x /interfaces/interface > exercise1/router-startup.xml
+netconf-console2 --host localhost --port 831 --user admin --password admin --db candidate --get-config -x /interfaces/interface > exercise1/router-candidate.xml
+
+# Core (port 832)
+netconf-console2 --host localhost --port 832 --user admin --password admin --db running   --get-config -x /interfaces/interface > exercise1/core-running.xml
+netconf-console2 --host localhost --port 832 --user admin --password admin --db startup   --get-config -x /interfaces/interface > exercise1/core-startup.xml
+netconf-console2 --host localhost --port 832 --user admin --password admin --db candidate --get-config -x /interfaces/interface > exercise1/core-candidate.xml
+```
+
+Compare the datastores of each device (empty output = datastores are identical):
+```bash
+# RAN
+diff exercise1/ran-running.xml    exercise1/ran-startup.xml
+diff exercise1/ran-running.xml    exercise1/ran-candidate.xml
+diff exercise1/ran-startup.xml    exercise1/ran-candidate.xml
+
+# Router
+diff exercise1/router-running.xml exercise1/router-startup.xml
+diff exercise1/router-running.xml exercise1/router-candidate.xml
+diff exercise1/router-startup.xml exercise1/router-candidate.xml
+
+# Core
+diff exercise1/core-running.xml   exercise1/core-startup.xml
+diff exercise1/core-running.xml   exercise1/core-candidate.xml
+diff exercise1/core-startup.xml   exercise1/core-candidate.xml
+```
+
+Verify IP consistency across all three devices end-to-end:
+```bash
+python3 network_check.py
+================================================================================
+🔍 Network Consistency Check - 2026-09-13 17:18:21
+================================================================================
+📡 Device Status:
+   RAN      (localhost:830): ✅ Connected - 4 interfaces
+   Router   (localhost:831): ✅ Connected - 4 interfaces
+   Core     (localhost:832): ✅ Connected - 4 interfaces
+
+🔗 Network Link Status:
+   Network A (RAN-Router Backhaul)     ✅ OK 10.0.1.1/30 ↔ 10.0.1.2/30
+   Network B (Router-Core)             ✅ OK 10.0.2.1/30 ↔ 10.0.2.2/30
+   Management Network                  ✅ OK 192.168.1.10/24 ↔ 192.168.1.20/24
+   Management Network (Router-Core)    ✅ OK 192.168.1.20/24 ↔ 192.168.1.30/24
+
+📋 Interface Details:
+   📱 RAN:
+      backhaul0    🟢 10.0.1.1/30         (Backhaul to router)
+      eth0         🟢 192.168.1.10/24     (Management interface)
+      lo0          🟢 127.0.0.1/32        (Loopback interface)
+      radio0       🟢 No IP               (5G NR radio interface)
+   📱 Router:
+      eth0         🟢 192.168.1.20/24     (Management interface)
+      eth1         🟢 10.0.1.2/30         (Interface to RAN)
+      eth2         🟢 10.0.2.1/30         (Interface to Core)
+      lo0          🟢 127.0.0.1/32        (Loopback interface)
+   📱 Core:
+      eth0         🟢 192.168.1.30/24     (Management interface)
+      eth1         🟢 10.0.2.2/30         (Interface to Router)
+      eth2         🟢 203.0.113.1/24      (Interface to Internet/External)
+      lo0          🟢 127.0.0.1/32        (Loopback interface)
+```
+
 
 ### Work with candidate
 
@@ -241,18 +473,196 @@ Activities:
 * How does this approach scale? What is the impact in terms of time spent if we have to manage 100 RAN devices, 50 router devices and 1 core network device?
 * Further checks: check that the three devices have consistent IP addresses with the *network-check.py* script and, in case not, modify IP addresses again
 
+Apply the changes to the *candidate* datastore (the *running* datastore is not affected until a *commit*):
+```bash
+netconf-console2 --host localhost --port 830 --user admin --password admin --db candidate --edit-config operations/exercise1-candidate-ran.xml
+netconf-console2 --host localhost --port 831 --user admin --password admin --db candidate --edit-config operations/exercise1-candidate-router.xml
+netconf-console2 --host localhost --port 832 --user admin --password admin --db candidate --edit-config operations/exercise1-candidate-core.xml
+```
+
+Check *running*, *startup* and *candidate* datastores for each device and save the output into the *exercise1* folder:
+```bash
+# RAN (port 830)
+netconf-console2 --host localhost --port 830 --user admin --password admin --db running   --get-config -x /interfaces/interface > exercise1/ran-running-candidate-ex.xml
+netconf-console2 --host localhost --port 830 --user admin --password admin --db startup   --get-config -x /interfaces/interface > exercise1/ran-startup-candidate-ex.xml
+netconf-console2 --host localhost --port 830 --user admin --password admin --db candidate --get-config -x /interfaces/interface > exercise1/ran-candidate-candidate-ex.xml
+
+# Router (port 831)
+netconf-console2 --host localhost --port 831 --user admin --password admin --db running   --get-config -x /interfaces/interface > exercise1/router-running-candidate-ex.xml
+netconf-console2 --host localhost --port 831 --user admin --password admin --db startup   --get-config -x /interfaces/interface > exercise1/router-startup-candidate-ex.xml
+netconf-console2 --host localhost --port 831 --user admin --password admin --db candidate --get-config -x /interfaces/interface > exercise1/router-candidate-candidate-ex.xml
+
+# Core (port 832)
+netconf-console2 --host localhost --port 832 --user admin --password admin --db running   --get-config -x /interfaces/interface > exercise1/core-running-candidate-ex.xml
+netconf-console2 --host localhost --port 832 --user admin --password admin --db startup   --get-config -x /interfaces/interface > exercise1/core-startup-candidate-ex.xml
+netconf-console2 --host localhost --port 832 --user admin --password admin --db candidate --get-config -x /interfaces/interface > exercise1/core-candidate-candidate-ex.xml
+```
+
+Compare running vs candidate for each device (the candidate holds the new changes, running still holds the old ones):
+```bash
+diff exercise1/ran-running-candidate-ex.xml    exercise1/ran-candidate-candidate-ex.xml
+diff exercise1/router-running-candidate-ex.xml exercise1/router-candidate-candidate-ex.xml
+diff exercise1/core-running-candidate-ex.xml   exercise1/core-candidate-candidate-ex.xml
+```
+
+Check network consistency with the provided script:
+```bash
+ python3 network_check.py
+================================================================================
+🔍 Network Consistency Check - 2026-09-13 17:31:02
+================================================================================
+📡 Device Status:
+   RAN      (localhost:830): ✅ Connected - 4 interfaces
+   Router   (localhost:831): ✅ Connected - 4 interfaces
+   Core     (localhost:832): ✅ Connected - 4 interfaces
+
+🔗 Network Link Status:
+   Network A (RAN-Router Backhaul)     ✅ OK 10.0.1.1/30 ↔ 10.0.1.2/30
+   Network B (Router-Core)             ✅ OK 10.0.2.1/30 ↔ 10.0.2.2/30
+   Management Network                  ✅ OK 192.168.1.10/24 ↔ 192.168.1.20/24
+   Management Network (Router-Core)    ✅ OK 192.168.1.20/24 ↔ 192.168.1.30/24
+
+📋 Interface Details:
+   📱 RAN:
+      backhaul0    🟢 10.0.1.1/30         (Backhaul to router)
+      eth0         🟢 192.168.1.10/24     (Management interface)
+      lo0          🟢 127.0.0.1/32        (Loopback interface)
+      radio0       🟢 No IP               (5G NR radio interface)
+   📱 Router:
+      eth0         🟢 192.168.1.20/24     (Management interface)
+      eth1         🟢 10.0.1.2/30         (Interface to RAN)
+      eth2         🟢 10.0.2.1/30         (Interface to Core)
+      lo0          🟢 127.0.0.1/32        (Loopback interface)
+   📱 Core:
+      eth0         🟢 192.168.1.30/24     (Management interface)
+      eth1         🟢 10.0.2.2/30         (Interface to Router)
+      eth2         🟢 203.0.113.1/24      (Interface to Internet/External)
+      lo0          🟢 127.0.0.1/32        (Loopback interface)
+```
+
+#### Answers to the activities questions
+
+**Would the current configuration allow the system to work properly?**
+Not yet. The `edit-config` operations were applied only to the *candidate* datastore. The device actually runs from the *running* datastore, which still holds the previous configuration. The new addresses (192.168.1.x/24, 10.0.100.0/30, 10.0.200.0/30) become active only after a *commit* (candidate → running).
+
+**Are there differences between the datastores? Why?**
+Yes. After editing the candidate we have `candidate ≠ running` (and `≠ startup`). This is expected: `edit-config` towards *candidate* does not touch *running* or *startup*. The candidate is a scratch/working copy that stays divergent until a *commit* copies it into *running*, and a *copy-config* copies *running* into *startup*.
+
+**What would happen if a device gets restarted in such a case?**
+On restart the device loads *startup* into *running*. Since the candidate was never committed, every edit is lost and the device comes back with the old *startup* configuration. The candidate content is discarded.
+
+**What would happen to the network if the BBU `backhaul0` did not match Router `eth1`? Was there any check available to prevent it?**
+The backhaul link would break: the two ends would sit in different subnets, so there would be no L3 connectivity between RAN and Router. NETCONF/YANG validation is *per-device* — each node only validates its own configuration against its models, so this cross-device mismatch is **not** caught automatically. This is exactly why the external `network_check.py` script exists: it verifies end-to-end consistency across all three devices.
+
+**How does this approach scale (100 RAN + 50 Router + 1 Core)?**
+It does not scale well. Configuring devices one by one with `netconf-console2` is an O(N) manual effort: 151 devices would require 151 × (edit-config + verification), which is slow and error-prone. This is the motivation for automation — Python/`ncclient` (Exercise 2) and Ansible (Exercise 3) — where the same logic loops over an inventory and applies the changes consistently to every device.
+
 ### Bonus
+
+Before committing, verify that the datastores are **not** aligned yet (the candidate holds the new changes, running and startup still hold the old ones):
+```bash
+# RAN (port 830)
+netconf-console2 --host localhost --port 830 --user admin --password admin --db running   --get-config -x /interfaces/interface > exercise1/ran-running-bonus-before.xml
+netconf-console2 --host localhost --port 830 --user admin --password admin --db startup   --get-config -x /interfaces/interface > exercise1/ran-startup-bonus-before.xml
+netconf-console2 --host localhost --port 830 --user admin --password admin --db candidate --get-config -x /interfaces/interface > exercise1/ran-candidate-bonus-before.xml
+
+# Router (port 831)
+netconf-console2 --host localhost --port 831 --user admin --password admin --db running   --get-config -x /interfaces/interface > exercise1/router-running-bonus-before.xml
+netconf-console2 --host localhost --port 831 --user admin --password admin --db startup   --get-config -x /interfaces/interface > exercise1/router-startup-bonus-before.xml
+netconf-console2 --host localhost --port 831 --user admin --password admin --db candidate --get-config -x /interfaces/interface > exercise1/router-candidate-bonus-before.xml
+
+# Core (port 832)
+netconf-console2 --host localhost --port 832 --user admin --password admin --db running   --get-config -x /interfaces/interface > exercise1/core-running-bonus-before.xml
+netconf-console2 --host localhost --port 832 --user admin --password admin --db startup   --get-config -x /interfaces/interface > exercise1/core-startup-bonus-before.xml
+netconf-console2 --host localhost --port 832 --user admin --password admin --db candidate --get-config -x /interfaces/interface > exercise1/core-candidate-bonus-before.xml
+
+# These diffs are expected to show differences (datastores NOT aligned)
+diff exercise1/ran-running-bonus-before.xml    exercise1/ran-candidate-bonus-before.xml
+diff exercise1/ran-startup-bonus-before.xml    exercise1/ran-candidate-bonus-before.xml
+diff exercise1/router-running-bonus-before.xml exercise1/router-candidate-bonus-before.xml
+diff exercise1/router-startup-bonus-before.xml exercise1/router-candidate-bonus-before.xml
+diff exercise1/core-running-bonus-before.xml   exercise1/core-candidate-bonus-before.xml
+diff exercise1/core-startup-bonus-before.xml   exercise1/core-candidate-bonus-before.xml
+```
 
 1. Perform a commit operation with *netconf-console2* so that the *candidate* datastore gets committed to the *running* and perform above checks again
 * Check with *netconf-console2* with *--get-config*, towards *running*, *startup* and *candidate*
     * Would the current configuration allow the system to work properly?
     * Are there differences between the datastores? Why? 
     * What would happen if a device gets restarted in such a case?
+
+```bash
+netconf-console2 --host localhost --port 830 --user admin --password admin --commit
+netconf-console2 --host localhost --port 831 --user admin --password admin --commit
+netconf-console2 --host localhost --port 832 --user admin --password admin --commit
+```
+
+After the commit, verify that *running* now matches *candidate*, but *startup* is still different (it is untouched by a commit):
+```bash
+# RAN (port 830)
+netconf-console2 --host localhost --port 830 --user admin --password admin --db running   --get-config -x /interfaces/interface > exercise1/ran-running-bonus-after-commit.xml
+netconf-console2 --host localhost --port 830 --user admin --password admin --db startup   --get-config -x /interfaces/interface > exercise1/ran-startup-bonus-after-commit.xml
+netconf-console2 --host localhost --port 830 --user admin --password admin --db candidate --get-config -x /interfaces/interface > exercise1/ran-candidate-bonus-after-commit.xml
+
+# Router (port 831)
+netconf-console2 --host localhost --port 831 --user admin --password admin --db running   --get-config -x /interfaces/interface > exercise1/router-running-bonus-after-commit.xml
+netconf-console2 --host localhost --port 831 --user admin --password admin --db startup   --get-config -x /interfaces/interface > exercise1/router-startup-bonus-after-commit.xml
+netconf-console2 --host localhost --port 831 --user admin --password admin --db candidate --get-config -x /interfaces/interface > exercise1/router-candidate-bonus-after-commit.xml
+
+# Core (port 832)
+netconf-console2 --host localhost --port 832 --user admin --password admin --db running   --get-config -x /interfaces/interface > exercise1/core-running-bonus-after-commit.xml
+netconf-console2 --host localhost --port 832 --user admin --password admin --db startup   --get-config -x /interfaces/interface > exercise1/core-startup-bonus-after-commit.xml
+netconf-console2 --host localhost --port 832 --user admin --password admin --db candidate --get-config -x /interfaces/interface > exercise1/core-candidate-bonus-after-commit.xml
+
+# running == candidate (empty diff), but startup still differs
+diff exercise1/ran-running-bonus-after-commit.xml    exercise1/ran-candidate-bonus-after-commit.xml
+diff exercise1/ran-startup-bonus-after-commit.xml    exercise1/ran-running-bonus-after-commit.xml
+diff exercise1/router-running-bonus-after-commit.xml exercise1/router-candidate-bonus-after-commit.xml
+diff exercise1/router-startup-bonus-after-commit.xml exercise1/router-running-bonus-after-commit.xml
+diff exercise1/core-running-bonus-after-commit.xml   exercise1/core-candidate-bonus-after-commit.xml
+diff exercise1/core-startup-bonus-after-commit.xml   exercise1/core-running-bonus-after-commit.xml
+```
+
 2. Perform a copy-config operation with with *netconf-console2* so that the *running* datastore gets committed to the *startup* and perform above checks again
 * Check with *netconf-console2* with *--get-config*, towards *running*, *startup* and *candidate*
     * Would the current configuration allow the system to work properly?
     * Are there differences between the datastores? Why? 
     * What would happen if a device gets restarted in such a case?
+
+```bash
+netconf-console2 --host localhost --port 830 --user admin --password admin --copy-running-to-startup
+netconf-console2 --host localhost --port 831 --user admin --password admin --copy-running-to-startup
+netconf-console2 --host localhost --port 832 --user admin --password admin --copy-running-to-startup
+```
+
+After the copy-config, verify that all three datastores are now **aligned** (all diffs are empty):
+```bash
+# RAN (port 830)
+netconf-console2 --host localhost --port 830 --user admin --password admin --db running   --get-config -x /interfaces/interface > exercise1/ran-running-bonus-after-copy.xml
+netconf-console2 --host localhost --port 830 --user admin --password admin --db startup   --get-config -x /interfaces/interface > exercise1/ran-startup-bonus-after-copy.xml
+netconf-console2 --host localhost --port 830 --user admin --password admin --db candidate --get-config -x /interfaces/interface > exercise1/ran-candidate-bonus-after-copy.xml
+
+# Router (port 831)
+netconf-console2 --host localhost --port 831 --user admin --password admin --db running   --get-config -x /interfaces/interface > exercise1/router-running-bonus-after-copy.xml
+netconf-console2 --host localhost --port 831 --user admin --password admin --db startup   --get-config -x /interfaces/interface > exercise1/router-startup-bonus-after-copy.xml
+netconf-console2 --host localhost --port 831 --user admin --password admin --db candidate --get-config -x /interfaces/interface > exercise1/router-candidate-bonus-after-copy.xml
+
+# Core (port 832)
+netconf-console2 --host localhost --port 832 --user admin --password admin --db running   --get-config -x /interfaces/interface > exercise1/core-running-bonus-after-copy.xml
+netconf-console2 --host localhost --port 832 --user admin --password admin --db startup   --get-config -x /interfaces/interface > exercise1/core-startup-bonus-after-copy.xml
+netconf-console2 --host localhost --port 832 --user admin --password admin --db candidate --get-config -x /interfaces/interface > exercise1/core-candidate-bonus-after-copy.xml
+
+# All diffs are expected to be empty (running == startup == candidate)
+diff exercise1/ran-running-bonus-after-copy.xml    exercise1/ran-startup-bonus-after-copy.xml
+diff exercise1/ran-running-bonus-after-copy.xml    exercise1/ran-candidate-bonus-after-copy.xml
+diff exercise1/ran-startup-bonus-after-copy.xml    exercise1/ran-candidate-bonus-after-copy.xml
+diff exercise1/router-running-bonus-after-copy.xml exercise1/router-startup-bonus-after-copy.xml
+diff exercise1/router-running-bonus-after-copy.xml exercise1/router-candidate-bonus-after-copy.xml
+diff exercise1/router-startup-bonus-after-copy.xml exercise1/router-candidate-bonus-after-copy.xml
+diff exercise1/core-running-bonus-after-copy.xml   exercise1/core-startup-bonus-after-copy.xml
+diff exercise1/core-running-bonus-after-copy.xml   exercise1/core-candidate-bonus-after-copy.xml
+diff exercise1/core-startup-bonus-after-copy.xml   exercise1/core-candidate-bonus-after-copy.xml
+```
 
 
 ## Exercise 2 - Automate with Python
@@ -269,6 +679,7 @@ Create a python script that makes use of [ncclient](https://pypi.org/project/ncc
 3. Check the devices with *get-config* and ensure all eth0 interfaces are correctly configured to be in 192.168.1.0/24
 
 **Tip:** See `exercise2_baseline.py` for a starting point and `exercise2_solution.py` for a complete example.
+
 
 #### Success Criteria
 - All eth0 interfaces on all devices have an IP in 192.168.1.0/24.
