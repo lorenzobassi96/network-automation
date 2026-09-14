@@ -145,7 +145,8 @@ Add `-v`, `-vv`, or `-vvv` for increasing levels of detail (NETCONF debugging).
 ansible-playbook -i inventory.yml network_automation.yml --tags=show -vvv
 ```
 
-## 🐳 Run with an Execution Environment (ansible-builder + ansible-navigator)
+
+# OPTIONAL: 🐳 Run with an Execution Environment (ansible-builder + ansible-navigator)
 
 Instead of installing Ansible and its dependencies locally, the playbook can run
 inside a self-contained **Execution Environment (EE)**. The EE is defined by
@@ -160,20 +161,48 @@ collections, and the Python NETCONF libraries (`ncclient`, `jxmlease`, ...).
 > with `--net=host` so the inventory targets (`localhost:830-832`) are reachable.
 >
 > These examples use **podman** (set in `ansible-navigator.yml`).
+>
+> **⚠️ Rootful (`sudo`) vs rootless:** the examples below use `sudo` to avoid
+> permission issues. If you go this route you **must be consistent**: build the
+> EE, start the devices, and run the playbook **all with `sudo`**. An image built
+> with `sudo` lives in root's container storage (`/var/lib/containers`) and would
+> **not** be found by a rootless `ansible-navigator`. Never mix rootful and
+> rootless commands, or you'll hit *"image not found"* errors.
 
 ### 1. Install the tooling (once):
 ```bash
-pip install ansible-builder ansible-navigator
+sudo pip3 install ansible-builder ansible-navigator
 ```
+
+> **`error: externally-managed-environment` (PEP 668)?** On recent
+> Debian/Ubuntu, `pip` refuses to install system-wide. Since these are CLI
+> applications, install them with **pipx** instead:
+> ```bash
+> sudo apt install pipx
+> pipx install ansible-builder
+> pipx install ansible-navigator
+> pipx ensurepath   # adds ~/.local/bin to PATH (open a new shell afterwards)
+> ```
+> Alternatively, use a virtual environment
+> (`python3 -m venv venv && source venv/bin/activate && pip install ansible-builder ansible-navigator`)
+> or override the check with `pip install --break-system-packages ...` (not recommended).
 
 ### 2. Start the devices (from the repository root):
 ```bash
-podman compose up -d
+sudo podman compose up -d
 ```
 
 ### 3. Build the execution environment (from this `ansible/` folder):
 ```bash
-ansible-builder build -t netconf-ee -f execution-environment.yml --container-runtime podman
+sudo ~/.local/bin/ansible-builder build -t netconf-ee -f execution-environment.yml --container-runtime podman -vvv
+```
+NB: WSL may crash during the build process due OOM (Out Of Memory) errors. Consider increasing the available memory for WSL.
+In case you are not able to complete the build, you can skip the build and access the image at:  docker.io/lorenzobassi/network-automation:netconf-ee-1.0.0
+In case the build is successful:
+```bash
+sudo podman images
+REPOSITORY                                      TAG          IMAGE ID      CREATED        SIZE
+localhost/netconf-ee                            latest       da9b18f56f99  2 minutes ago  553 MB
 ```
 
 ### 4. Run the playbook with ansible-navigator:
@@ -182,23 +211,45 @@ pass the playbook and its arguments. `--mode stdout` prints plain output (drop i
 to use the interactive TUI).
 ```bash
 # Show current configuration on all devices
-ansible-navigator run network_automation.yml -i inventory.yml --tags show --mode stdout
+sudo ~/.local/bin/ansible-navigator run network_automation.yml -i inventory.yml --tags show --mode stdout
 
 # Apply the automatic IP configuration on all devices
-ansible-navigator run network_automation.yml -i inventory.yml --tags auto --mode stdout
+sudo ~/.local/bin/ansible-navigator run network_automation.yml -i inventory.yml --tags auto --mode stdout
 
 # Target a single device
-ansible-navigator run network_automation.yml -i inventory.yml --tags show --limit RAN --mode stdout
+sudo ~/.local/bin/ansible-navigator run network_automation.yml -i inventory.yml --tags show --limit RAN --mode stdout
 
 # Override parameters (change a specific interface)
-ansible-navigator run network_automation.yml -i inventory.yml --tags change --mode stdout \
+sudo ~/.local/bin/ansible-navigator run network_automation.yml -i inventory.yml --tags change --mode stdout \
   -e "target_device=RAN target_interface=backhaul0 target_ip=10.2.1.1 target_prefix=30"
 ```
 
-> **Docker Desktop (macOS/Windows):** `--net=host` is not supported. Set
-> `container-engine: docker` in `ansible-navigator.yml`, remove the `--net=host`
-> container option, attach the EE to the compose network instead
-> (`--net=telco-net`), and target the device container names.
+### EE vs local execution: what actually changed?
+
+Compare this run with the "local" flow from the [🚀 Usage & Examples](#-usage--examples) section
+above (`ansible-playbook -i inventory.yml ...`), and try to answer these questions:
+
+- Before running step 4, did you have to `pip install ncclient jxmlease` or run
+  `ansible-galaxy collection install` on your host, like you did for the local flow? Why not?
+- If a teammate with a brand-new laptop (no Python, no Ansible, no collections installed)
+  received only this repo, could they run `ansible-navigator run ...` and get the exact same
+  result you did? Would they be able to run `ansible-playbook` directly, without any setup?
+- `requirements.txt` and `requirements.yml` still exist in this folder — are they used when you
+  run through `ansible-navigator`? Where did their contents actually end up?
+- What happens if your host's globally installed `ncclient` is a different (older/newer)
+  version than the one the playbook was tested with? Does that risk exist when running through
+  the EE?
+- Two people build the same `execution-environment.yml` on two different machines (different
+  OS, different Python already installed). Do you expect their `ansible-playbook` version, their
+  `ansible.netcommon` version, and their `ncclient` version to match? Why?
+
+The point: `execution-environment.yml` pins **every** dependency (ansible-core, collections,
+Python libraries) into a single container image. You build it **once**, then `ansible-navigator`
+runs the playbook *inside* that container — the host only needs `podman`/`docker` and
+`ansible-navigator` itself, nothing NETCONF-specific. This removes the classic "works on my
+machine" problem caused by missing or mismatched dependencies, at the cost of an extra build step
+and a (much) heavier artifact than a handful of `pip install` commands.
+
 
 ## 🔍 What's the Same?
 
