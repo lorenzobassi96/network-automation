@@ -32,7 +32,7 @@ All three services use the same image:
 ghcr.io/notconf/notconf:14265929521
 ```
 
-The image starts a simulated NETCONF device. There are no Dockerfiles or local builds: at startup, Compose/Podman pulls the image from the GitHub Container Registry if it is not already available locally.
+The image starts a simulated NETCONF device. There are no Dockerfiles or local builds: at startup, Docker Compose pulls the image from the GitHub Container Registry if it is not already available locally.
 
 The service configuration differentiates the instances:
 
@@ -107,23 +107,17 @@ The values in the startup files are the exercise's starting point and can differ
 
 ## Startup and Verification
 
-Start with Docker Compose:
+Start with Docker Compose (rootful):
 
 ```bash
-docker compose up -d
-```
-
-Or, in the Podman environment documented by the repository:
-
-```bash
-sudo podman-compose up -d
+sudo docker compose up -d
 ```
 
 Check the containers and published ports:
 
 ```bash
-docker compose ps
-docker compose config
+sudo docker compose ps
+sudo docker compose config
 ```
 
 A NETCONF verification of the RAN from the host uses published port `830`:

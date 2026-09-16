@@ -117,35 +117,50 @@ NAME      STATE    VERSION
 
 You need the following tools installed on your system (any Linux distribution, including WSL, macOS, or native):
 
-- **Podman**
-- **Podman Compose** (`podman-compose`; some Podman versions also support the built-in `podman compose` subcommand, but not all — if `podman compose` gives `unrecognized command`, just use `podman-compose` instead)
+- **Docker** (Docker Engine)
+- **Docker Compose** (the built-in `docker compose` subcommand, provided by the `docker-compose-plugin` package that ships with Docker Engine)
 - **Python 3** and **pip3**
 - **Ansible**
 - **Python packages:** `ncclient`, `netconf-console2`, `paramiko`
 
 
 **For WSL users:**
-This lab runs with **Podman in rootful mode** (all `podman` commands are executed with `sudo`).
+This lab runs with **Docker in rootful mode** (all `docker` commands are executed with `sudo`).
 Rootful mode avoids the rootless low-port (830/831/832) binding limitations.
 
-Install Podman directly inside your WSL distribution using its package manager:
+Install Docker directly inside your WSL distribution using Docker's official APT repository:
 
 ```bash
 # Debian / Ubuntu
 sudo apt update
-sudo apt install -y podman podman-compose python3-pip git vim tmux
+sudo apt install -y ca-certificates curl git vim tmux python3-pip
+
+# Add Docker's official GPG key and repository
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# Install Docker Engine, CLI, containerd and the Compose plugin
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 ```
 
+> On Ubuntu, replace `linux/debian` with `linux/ubuntu` in the two URLs above.
+
 Notes:
-- Podman is daemonless, so there is no service to start.
-- `podman-compose` provides `docker-compose`-like behavior; alternatively the native `podman compose` command can be used if the compose provider is available on your system (requires a recent Podman with the compose plugin installed). If you get `Error: unrecognized command "podman compose"`, your Podman install doesn't have it — just use `podman-compose` instead.
+- Docker uses a background daemon (`dockerd`). On WSL start it with `sudo service docker start` (or `sudo dockerd &`); on native Linux with systemd enable it with `sudo systemctl enable --now docker`.
+- The `docker compose` subcommand is provided by the `docker-compose-plugin` package installed above (this replaces the standalone `docker-compose` binary).
 
 ### 2. Install Required Tools
 
 Install the above tools using your distribution's package manager or download from the official websites:
 
-- [Podman installation guide](https://podman.io/docs/installation)
-- [podman-compose installation](https://github.com/containers/podman-compose)
+- [Docker installation guide](https://docs.docker.com/engine/install/)
+- [Docker Compose installation](https://docs.docker.com/compose/install/)
 - [Python downloads](https://www.python.org/downloads/)
 - [Ansible installation guide](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html)
 
@@ -166,16 +181,19 @@ source ~/.bashrc
 ```
 
 
-### 3. Rootful Podman
+### 3. Rootful Docker
 
-This lab uses **rootful Podman**, so container commands are prefixed with `sudo`.
-No user/group setup is required (unlike Docker's `docker` group).
+This lab uses **rootful Docker**, so container commands are prefixed with `sudo`.
+Running with `sudo` avoids the rootless low-port (830/831/832) binding limitations
+and keeps the commands consistent throughout the lab. If you prefer running Docker
+without `sudo`, add your user to the `docker` group (`sudo usermod -aG docker $USER`)
+and open a new shell — but then drop the `sudo` prefix from every command below.
 
 ### 4. Verify Installations
 
 ```bash
-sudo podman --version
-podman-compose --version   # or, if available: sudo podman compose version
+sudo docker --version
+sudo docker compose version
 python3 --version
 pip3 --version
 ansible --version
@@ -190,39 +208,30 @@ git clone https://github.com/unusualfor/network-automation.git
 cd network-automation/
 ```
 
-Start the lab with Podman (rootful) using one of the following:
+Start the lab with Docker Compose (rootful):
 
 ```bash
-# Using podman-compose (works on all Podman installs)
-sudo podman-compose up
-
-# Or, if your Podman install has the compose plugin, the native subcommand also works
-sudo podman compose up
+sudo docker compose up
 ```
 
 Check that all containers are running:
 ```bash
-sudo podman ps                                                      BLQ00560LT: Sun Sep 13 11:17:26 2026
-
-CONTAINER ID  IMAGE                                COMMAND               CREATED        STATUS                  PORT
-S                 NAMES
-9d3d35a4b8be  ghcr.io/notconf/notconf:14265929521  /bin/sh -c /run.s...  4 minutes ago  Up 4 minutes (healthy)  0.0.
-0.0:830->830/tcp  ran-device
-e766e8a33b54  ghcr.io/notconf/notconf:14265929521  /bin/sh -c /run.s...  4 minutes ago  Up 4 minutes (healthy)  0.0.
-0.0:831->830/tcp  router-device
-d14d68a976ca  ghcr.io/notconf/notconf:14265929521  /bin/sh -c /run.s...  4 minutes ago  Up 4 minutes (healthy)  0.0.
-0.0:832->830/tcp  core-device
+sudo docker ps
+CONTAINER ID   IMAGE                                 COMMAND                  CREATED         STATUS                   PORTS                                     NAMES
+9d3d35a4b8be   ghcr.io/notconf/notconf:14265929521   "/bin/sh -c /run.sh"     4 minutes ago   Up 4 minutes (healthy)   0.0.0.0:830->830/tcp, :::830->830/tcp     ran-device
+e766e8a33b54   ghcr.io/notconf/notconf:14265929521   "/bin/sh -c /run.sh"     4 minutes ago   Up 4 minutes (healthy)   0.0.0.0:831->830/tcp, :::831->830/tcp     router-device
+d14d68a976ca   ghcr.io/notconf/notconf:14265929521   "/bin/sh -c /run.sh"     4 minutes ago   Up 4 minutes (healthy)   0.0.0.0:832->830/tcp, :::832->830/tcp     core-device
 ```
 
 Check host ports:
 ```bash
-sudo podman port ran-device
+sudo docker port ran-device
 830/tcp -> 0.0.0.0:830
 
-sudo podman port router-device
+sudo docker port router-device
 830/tcp -> 0.0.0.0:831
 
-sudo podman port core-device
+sudo docker port core-device
 830/tcp -> 0.0.0.0:832
 ```
 
@@ -670,7 +679,7 @@ diff exercise1/core-startup-bonus-after-copy.xml   exercise1/core-candidate-bonu
 Start by restarting the system with 
 
 ```bash
-sudo podman-compose restart   # or: sudo podman compose restart (if available)
+sudo docker compose restart
 ```
 
 Create a python script that makes use of [ncclient](https://pypi.org/project/ncclient/) to perform the following: 
@@ -694,7 +703,7 @@ Activities:
 Start by restarting the system with 
 
 ```bash
-sudo podman-compose restart   # or: sudo podman compose restart (if available)
+sudo docker compose restart
 ```
 
 1. Look at the files inside *ansible* folder
@@ -719,7 +728,7 @@ Activities:
 Start by restarting the system with 
 
 ```bash
-sudo podman-compose restart   # or: sudo podman compose restart (if available)
+sudo docker compose restart
 ```
 
 Create a python script that makes use of [ncclient](https://pypi.org/project/ncclient/) to perform the following tasks. Feel free to reuse any code already available while making sure to comment the different functions. 

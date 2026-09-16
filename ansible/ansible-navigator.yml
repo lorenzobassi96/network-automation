@@ -7,7 +7,7 @@ ansible-navigator:
   execution-environment:
     enabled: true
     image: netconf-ee:latest
-    container-engine: podman
+    container-engine: docker
     pull:
       policy: missing
     container-options:

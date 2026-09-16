@@ -9,7 +9,7 @@ This directory contains an Ansible playbook that configures 3 network devices wi
 - `README.md` - This file
 - `ansible.cfg` - Ansible configuration (optional)
 - `execution-environment.yml` - Execution Environment definition for `ansible-builder`
-- `ansible-navigator.yml` - `ansible-navigator` config (EE image, podman, host network)
+- `ansible-navigator.yml` - `ansible-navigator` config (EE image, docker, host network)
 - `requirements.txt` - Python dependencies (ncclient, jxmlease, lxml, paramiko)
 - `requirements.yml` - Ansible collection dependencies (ansible.netcommon, ansible.posix)
 
@@ -160,13 +160,13 @@ collections, and the Python NETCONF libraries (`ncclient`, `jxmlease`, ...).
 > ports `830/831/832` on the host. `ansible-navigator.yml` already runs the EE
 > with `--net=host` so the inventory targets (`localhost:830-832`) are reachable.
 >
-> These examples use **podman** (set in `ansible-navigator.yml`).
+> These examples use **docker** (set in `ansible-navigator.yml`).
 >
 > **⚠️ Rootful (`sudo`) vs rootless:** the examples below use `sudo` to avoid
 > permission issues. If you go this route you **must be consistent**: build the
 > EE, start the devices, and run the playbook **all with `sudo`**. An image built
-> with `sudo` lives in root's container storage (`/var/lib/containers`) and would
-> **not** be found by a rootless `ansible-navigator`. Never mix rootful and
+> with `sudo` lives in the root daemon's image store and would
+> **not** be found by a rootless build. Never mix rootful and
 > rootless commands, or you'll hit *"image not found"* errors.
 
 ### 1. Install the tooling (once):
@@ -189,20 +189,20 @@ sudo pip3 install ansible-builder ansible-navigator
 
 ### 2. Start the devices (from the repository root):
 ```bash
-sudo podman compose up -d
+sudo docker compose up -d
 ```
 
 ### 3. Build the execution environment (from this `ansible/` folder):
 ```bash
-sudo ~/.local/bin/ansible-builder build -t netconf-ee -f execution-environment.yml --container-runtime podman -vvv
+sudo ~/.local/bin/ansible-builder build -t netconf-ee -f execution-environment.yml --container-runtime docker -vvv
 ```
 NB: WSL may crash during the build process due OOM (Out Of Memory) errors. Consider increasing the available memory for WSL.
 In case you are not able to complete the build, you can skip the build and access the image at:  docker.io/lorenzobassi/network-automation:netconf-ee-1.0.0
 In case the build is successful:
 ```bash
-sudo podman images
-REPOSITORY                                      TAG          IMAGE ID      CREATED        SIZE
-localhost/netconf-ee                            latest       da9b18f56f99  2 minutes ago  553 MB
+sudo docker images
+REPOSITORY                            TAG          IMAGE ID      CREATED        SIZE
+netconf-ee                            latest       da9b18f56f99  2 minutes ago  553 MB
 ```
 
 ### 4. Run the playbook with ansible-navigator:
@@ -245,7 +245,7 @@ above (`ansible-playbook -i inventory.yml ...`), and try to answer these questio
 
 The point: `execution-environment.yml` pins **every** dependency (ansible-core, collections,
 Python libraries) into a single container image. You build it **once**, then `ansible-navigator`
-runs the playbook *inside* that container — the host only needs `podman`/`docker` and
+runs the playbook *inside* that container — the host only needs `docker` and
 `ansible-navigator` itself, nothing NETCONF-specific. This removes the classic "works on my
 machine" problem caused by missing or mismatched dependencies, at the cost of an extra build step
 and a (much) heavier artifact than a handful of `pip install` commands.
