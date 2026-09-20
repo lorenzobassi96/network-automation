@@ -175,10 +175,14 @@ sudo pip3 install ansible-builder ansible-navigator
 ```
 
 > **`error: externally-managed-environment` (PEP 668)?** On recent
-> Debian/Ubuntu, `pip` refuses to install system-wide. Since these are CLI
+> Debian/Ubuntu and Fedora, `pip` refuses to install system-wide. Since these are CLI
 > applications, install them with **pipx** instead:
 > ```bash
+> # Debian / Ubuntu
 > sudo apt install pipx
+> # Fedora
+> sudo dnf install pipx
+>
 > pipx install ansible-builder
 > pipx install ansible-navigator
 > pipx ensurepath   # adds ~/.local/bin to PATH (open a new shell afterwards)

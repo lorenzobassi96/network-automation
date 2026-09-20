@@ -128,7 +128,9 @@ You need the following tools installed on your system (any Linux distribution, i
 This lab runs with **Docker in rootful mode** (all `docker` commands are executed with `sudo`).
 Rootful mode avoids the rootless low-port (830/831/832) binding limitations.
 
-Install Docker directly inside your WSL distribution using Docker's official APT repository:
+Install Docker directly inside your WSL distribution using Docker's official repository.
+
+**Debian / Ubuntu (APT):**
 
 ```bash
 # Debian / Ubuntu
@@ -151,6 +153,24 @@ sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin d
 
 > On Ubuntu, replace `linux/debian` with `linux/ubuntu` in the two URLs above.
 
+**Fedora (DNF):**
+
+```bash
+# Fedora
+sudo dnf install -y ca-certificates curl git vim tmux python3-pip
+
+# Add Docker's official repository
+sudo dnf -y install dnf-plugins-core
+sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+
+# Install Docker Engine, CLI, containerd and the Compose plugin
+sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+```
+
+> On newer Fedora releases `dnf config-manager` is provided by the `dnf-plugins-core`
+> package installed above. If `config-manager` is unavailable, add the repo with
+> `sudo dnf config-manager addrepo --from-repofile=https://download.docker.com/linux/fedora/docker-ce.repo`.
+
 Notes:
 - Docker uses a background daemon (`dockerd`). On WSL start it with `sudo service docker start` (or `sudo dockerd &`); on native Linux with systemd enable it with `sudo systemctl enable --now docker`.
 - The `docker compose` subcommand is provided by the `docker-compose-plugin` package installed above (this replaces the standalone `docker-compose` binary).
@@ -166,7 +186,7 @@ Install the above tools using your distribution's package manager or download fr
 
 **Install Python dependencies:**
 
-On Debian/Ubuntu, `pip3 install --user` may fail with `externally-managed-environment` (PEP 668).
+On Debian/Ubuntu and Fedora, `pip3 install --user` may fail with `externally-managed-environment` (PEP 668).
 To install system-wide anyway (skip the virtual environment), pass `--break-system-packages`:
 
 ```bash
@@ -764,7 +784,7 @@ Activities:
 - **ncclient not installed:**
     - Run `pip3 install ncclient`.
 - **`externally-managed-environment` error when running `pip3 install`:**
-    - Debian/Ubuntu blocks system-wide pip installs (PEP 668). Add `--break-system-packages` to the `pip3 install` command.
+    - Debian/Ubuntu and Fedora block system-wide pip installs (PEP 668). Add `--break-system-packages` to the `pip3 install` command.
 - **`command not found` for `ansible`, `netconf-console2`, etc. after `pip3 install --user`:**
     - `~/.local/bin` is not in your `PATH`. Run `echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc`.
 - **`ModuleNotFoundError: No module named 'six'` when running `netconf-console2`:**
