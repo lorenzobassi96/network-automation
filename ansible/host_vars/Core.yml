@@ -1,9 +1,0 @@
----
-# Per-device IP assignments used by 'auto' mode
-interface_ips:
-  eth0:
-    ip: "192.168.1.30"
-    prefix: 24
-  eth1:
-    ip: "10.0.2.2"
-    prefix: 30

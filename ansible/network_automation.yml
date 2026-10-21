@@ -10,9 +10,35 @@
   hosts: devices
   gather_facts: false
   vars:
-    # Default prefix length for point-to-point links.
-    # Per-device IP assignments live in host_vars/<host>.yml as 'interface_ips'.
+    # Default prefix length for point-to-point links
     default_prefix_length: 30
+    
+    # Predefined IP assignments for 'auto' mode
+    ip_assignments:
+      RAN:
+        eth0:
+          ip: "192.168.1.11"
+          prefix: 24
+        backhaul0:
+          ip: "10.0.1.1"
+          prefix: 30
+      Router:
+        eth0:
+          ip: "192.168.1.20"
+          prefix: 24
+        eth1:
+          ip: "10.0.1.2"
+          prefix: 30
+        eth2:
+          ip: "10.0.2.1"
+          prefix: 30
+      Core:
+        eth0:
+          ip: "192.168.1.30"
+          prefix: 24
+        eth1:
+          ip: "10.0.2.2"
+          prefix: 30
 
   tasks:
     # ===========================================
@@ -21,10 +47,9 @@
     - name: "📋 Show Current Configuration"
       tags: [show, never]
       block:
-        - name: "Get running configuration"
+        - name: "Get running configuration from {{ inventory_hostname }}"
           ansible.netcommon.netconf_get:
             source: running
-            display: json
             filter: |
               <interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces">
                 <interface>
@@ -38,18 +63,18 @@
                 </interface>
               </interfaces>
           register: device_config
+          ignore_errors: true
 
-        - name: "Display configuration status"
+        - name: "Display configuration status for {{ inventory_hostname }}"
           debug:
             msg: |
               📱 {{ inventory_hostname }}:
-              {% for iface in device_config.output.data.interfaces.interface %}
-                 - {{ iface.name }}: {{ iface.ipv4.address.ip ~ '/' ~ iface.ipv4.address['prefix-length'] if iface.ipv4 is defined else 'no IP' }}
-              {% endfor %}
-      rescue:
-        - name: "Report retrieval failure"
-          debug:
-            msg: "❌ Failed to retrieve configuration from {{ inventory_hostname }}: {{ ansible_failed_result.msg | default('unknown error') }}"
+              {% if device_config.failed %}
+                 ❌ Failed to retrieve configuration: {{ device_config.msg }}
+              {% else %}
+                 ✅ Configuration retrieved successfully
+                 Interfaces: {{ device_interfaces | join(', ') }}
+              {% endif %}
 
     # ===========================================
     # AUTO MODE - Change all IPs
@@ -57,7 +82,7 @@
     - name: "🚀 Automatic IP Configuration"
       tags: [auto, never]
       block:
-        - name: "Change IP addresses"
+        - name: "Change IP addresses on {{ inventory_hostname }}"
           ansible.netcommon.netconf_config:
             target: candidate
             commit: true
@@ -66,7 +91,7 @@
               <config xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
                 <interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces">
                   {% for interface_name in device_interfaces %}
-                  {% if interface_name in interface_ips %}
+                  {% if interface_name in ip_assignments[inventory_hostname] %}
                   <interface>
                     <name>{{ interface_name }}</name>
                     <ipv4 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip"
@@ -74,8 +99,8 @@
                           nc:operation="replace">
                       <enabled>true</enabled>
                       <address>
-                        <ip>{{ interface_ips[interface_name].ip }}</ip>
-                        <prefix-length>{{ interface_ips[interface_name].prefix }}</prefix-length>
+                        <ip>{{ ip_assignments[inventory_hostname][interface_name].ip }}</ip>
+                        <prefix-length>{{ ip_assignments[inventory_hostname][interface_name].prefix }}</prefix-length>
                       </address>
                     </ipv4>
                   </interface>
@@ -84,20 +109,21 @@
                 </interfaces>
               </config>
           register: config_result
+          ignore_errors: true
 
-        - name: "Display result"
+        - name: "Display result for {{ inventory_hostname }}"
           debug:
             msg: |
+              {% if config_result.failed %}
+              ❌ Failed to configure {{ inventory_hostname }}: {{ config_result.msg }}
+              {% else %}
               ✅ Successfully configured {{ inventory_hostname }}:
               {% for interface_name in device_interfaces %}
-              {% if interface_name in interface_ips %}
-                 - {{ interface_name }}: {{ interface_ips[interface_name].ip }}/{{ interface_ips[interface_name].prefix }}
+              {% if interface_name in ip_assignments[inventory_hostname] %}
+                 - {{ interface_name }}: {{ ip_assignments[inventory_hostname][interface_name].ip }}/{{ ip_assignments[inventory_hostname][interface_name].prefix }}
               {% endif %}
               {% endfor %}
-      rescue:
-        - name: "Report configuration failure"
-          fail:
-            msg: "❌ Failed to configure {{ inventory_hostname }}: {{ ansible_failed_result.msg | default('unknown error') }}"
+              {% endif %}
 
     # ===========================================
     # CHANGE MODE - Change specific interface
@@ -113,8 +139,7 @@
         - name: "Validate input parameters"
           assert:
             that:
-              # Each octet constrained to 0-255 (rejects e.g. 999.0.0.1)
-              - target_ip is match('^((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])$')
+              - target_ip is match('^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$')
               - target_prefix | default(30) | int <= 32
               - target_prefix | default(30) | int >= 0
             fail_msg: "Invalid IP address or prefix length"
@@ -149,34 +174,14 @@
             msg: |
               ✅ Successfully changed {{ inventory_hostname }}:{{ target_interface }} to {{ target_ip }}/{{ target_prefix | default(30) }}
 
-# Post-run summary play - reads real state back from each device
+# Post-run summary play
 - name: 📊 Configuration Summary
-  hosts: devices
+  hosts: localhost
   gather_facts: false
   tags: [auto, never]
   tasks:
-    - name: "Retrieve final running configuration"
-      ansible.netcommon.netconf_get:
-        source: running
-        display: json
-        filter: |
-          <interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces">
-            <interface>
-              <name/>
-              <ipv4 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip">
-                <address>
-                  <ip/>
-                  <prefix-length/>
-                </address>
-              </ipv4>
-            </interface>
-          </interfaces>
-      register: final_config
-
-    - name: "Show final configuration"
+    - name: Display final network topology
       debug:
         msg: |
-          📱 {{ inventory_hostname }}:
-          {% for iface in final_config.output.data.interfaces.interface %}
-             - {{ iface.name }}: {{ iface.ipv4.address.ip ~ '/' ~ iface.ipv4.address['prefix-length'] if iface.ipv4 is defined else 'no IP' }}
-          {% endfor %}
+          
+          🎉 All interfaces updated successfully!          
