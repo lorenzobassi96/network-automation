@@ -1,0 +1,109 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+  <interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces">
+    <interface>
+      <name>eth0</name>
+      <description>Management interface</description>
+      <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-if-type">ianaift:ethernetCsmacd</type>
+      <enabled>true</enabled>
+      <ipv4 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip">
+        <enabled>true</enabled>
+        <address>
+          <ip>192.168.100.30</ip>
+          <prefix-length>24</prefix-length>
+        </address>
+      </ipv4>
+    </interface>
+    <interface>
+      <name>eth1</name>
+      <description>Interface to Router</description>
+      <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-if-type">ianaift:ethernetCsmacd</type>
+      <enabled>true</enabled>
+      <ipv4 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip">
+        <enabled>true</enabled>
+        <address>
+          <ip>10.0.172.2</ip>
+          <prefix-length>30</prefix-length>
+        </address>
+      </ipv4>
+    </interface>
+    <interface>
+      <name>eth2</name>
+      <description>Interface to Internet/External</description>
+      <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-if-type">ianaift:ethernetCsmacd</type>
+      <enabled>true</enabled>
+      <ipv4 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip">
+        <enabled>true</enabled>
+        <address>
+          <ip>203.0.113.1</ip>
+          <prefix-length>24</prefix-length>
+        </address>
+      </ipv4>
+    </interface>
+    <interface>
+      <name>lo0</name>
+      <description>Loopback interface</description>
+      <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-if-type">ianaift:softwareLoopback</type>
+      <enabled>true</enabled>
+      <ipv4 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip">
+        <enabled>true</enabled>
+        <address>
+          <ip>127.0.0.1</ip>
+          <prefix-length>32</prefix-length>
+        </address>
+      </ipv4>
+    </interface>
+  </interfaces>
+  <keystore xmlns="urn:ietf:params:xml:ns:yang:ietf-keystore">
+    <asymmetric-keys>
+      <asymmetric-key>
+        <name>genkey</name>
+        <public-key-format xmlns:ct="urn:ietf:params:xml:ns:yang:ietf-crypto-types">ct:ssh-public-key-format</public-key-format>
+        <private-key-format xmlns:ct="urn:ietf:params:xml:ns:yang:ietf-crypto-types">ct:rsa-private-key-format</private-key-format>
+        <cleartext-private-key>MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDl11taBp1cAQbXcU2hndx5OZvhKpjkZog5qrDigxIpZsQrZ6IQbKiOhOh01D5rKYUW7579iSJjVIP2n+TO77/T9KRKTsatUAIl2kfSK+VgNick8Dn2etoGUCGWmy/EyhqQssIlw1MtwYmuuDawpS/x1X2DoIbCpcr39EmJnjUdGmI/IVIykDLs6K6zSiGQdAZZN7LCTxxq9SLt7q78yce/gAp5kQgMC0KmP2V6GBwBHY+t+pOYeD5ZvlfGmTG2p/YjnvpjmFpjfHga9Wp/13SO3mXaXwqiEu1nmNWP+gVndNT2v3HB/bCQxls0uTECBx1FEfbSobqndpY+Qydsl1sNAgMBAAECggEADWYPDMH69WyX5gJUaLoHqsd5d1hg3lu90ELLmgDTE7fKcs9RSszSzLAhzwG6e8vJVut0JMqURx8brEpo78lZMPV/iFdsTJkv7t35Nt7ZOdEeWhBpCJ3jzN9p/dohIEM55jqNh98Jn867BIT3pzeSAnKUJRK8GGfK28aRbOTcqswNIlTQkyfJzClGXgmfaomoU7J+koQKF1H+TasHT6+ALBzn3OU1BAc++BF3KBL8aeOSKgK38sylrPHjfshFJxoJEuCqORxZu8OgWx5KuGAirW6OS3Z8Y4fi41ualPIY2KfmElifHMuXtKFuIu6zWux0Ez5NR9HdLCMuQkqMyOKn/wKBgQD+yGIqMgatMbQMI9joFHkjOqMn7czoq4nTu52ISZDv5Pc0F8yCIJbaQ8SWOORrs4nabEUO7uWyEegQxKrhjujos2ZSE8R0iQFTRpADuenaO8HO10tgK4h1Wu7NcnKlCXtl75ifQe+PfB9AQT/5wCxxf1QVapePdFy9tDGeIa2RwwKBgQDm8Hfd/rQkVw8TYQpnzxBOEn9ZnOKmxkgfV8Bq5hfI50tLDedfaJKYNOLKDxrL4oA9LL5mPXNKeUAV2LQwXnp1ihp/Yrf/+nx52FbwU8ILdhtvgpsQNkNHjbhXe1OYEQAegLB1EIq6gvh3oYBdxyTQcg7sfOcXVPuZYx3k3KhC7wKBgFwi8vz3Ylq3orjRLdufq78FsYL7CCMMBafALVPf5r4aOxtnj9lvF56O60S4BkK8hpmqlb60vfQLbbTCqlkvaSLd3Z7I7z6FXSlUVzhBv0PgYFIAoY2BsLNf0wQQ40yzhSBz6OmO2qc058hA0HXs/SV+OlYUWgLSvccMpvTckPwpAoGBAIhim2fPdDPB9nVLagnEj6yL4AncTT6Q+ycHe+ul14YekqjQnUQLTgf1s7oBEaI3MeTu98MJp3zj/qToRgIKyeeAmAWDF4dlNv3+ddmYnZCHP8yrJUh9w14OpD+F5eh4oclh1tRL4KIllvePuW+onGU99vJTEWcGGVCM6KqwZe6hAoGBAMbkHtKJVsWGBM1V6N4nUNs3xEimkYTdV4LyBpjK8lCpPO/7CuI2Hd+NV8nFX8JNN49lTipUqNuOvSkwMaBzIaXTfdztl1iZvrCUJ9RlQy/Ky4XEHqF789hkVd26WX7Gq0NUDbx5S2NECLRSoVPg+B+TKEis7khNQcMCh8gOWB0w</cleartext-private-key>
+      </asymmetric-key>
+    </asymmetric-keys>
+  </keystore>
+  <nacm xmlns="urn:ietf:params:xml:ns:yang:ietf-netconf-acm">
+    <enable-nacm>false</enable-nacm>
+  </nacm>
+  <netconf-server xmlns="urn:ietf:params:xml:ns:yang:ietf-netconf-server">
+    <listen>
+      <endpoints>
+        <endpoint>
+          <name>default-ssh</name>
+          <ssh>
+            <tcp-server-parameters>
+              <local-address>0.0.0.0</local-address>
+            </tcp-server-parameters>
+            <ssh-server-parameters>
+              <server-identity>
+                <host-key>
+                  <name>default-key</name>
+                  <public-key>
+                    <central-keystore-reference>genkey</central-keystore-reference>
+                  </public-key>
+                </host-key>
+                <banner xmlns="urn:cesnet:libnetconf2-netconf-server">netopeer2-netconf-server-2.3.4</banner>
+              </server-identity>
+              <client-authentication>
+                <users>
+                  <user>
+                    <name>admin</name>
+                    <password>$0$admin</password>
+                  </user>
+                  <user>
+                    <name>root</name>
+                    <keyboard-interactive xmlns="urn:cesnet:libnetconf2-netconf-server">
+                      <use-system-auth/>
+                    </keyboard-interactive>
+                  </user>
+                </users>
+              </client-authentication>
+            </ssh-server-parameters>
+          </ssh>
+        </endpoint>
+      </endpoints>
+    </listen>
+  </netconf-server>
+</data>
