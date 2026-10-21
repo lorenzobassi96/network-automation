@@ -15,7 +15,9 @@ EDIT_CONFIG_TEMPLATE = '''
     <interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces">
         <interface>
             <name>eth0</name>
-            <ipv4 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip">
+            <ipv4 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip"
+                  xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0"
+                  nc:operation="replace">
                 <address>
                     <ip>{ip}</ip>
                     <prefix-length>{netmask}</prefix-length>
@@ -61,7 +63,7 @@ def edit_config_eth0(m, eth0):
     """
     config_xml = EDIT_CONFIG_TEMPLATE.format(ip=eth0.get('ip'), netmask=eth0.get('prefix-length'))
     try:
-        response = m.edit_config(target='running', config=config_xml, operation='replace')
+        response = m.edit_config(target='running', config=config_xml)
         print("edit-config response:", response)
     except Exception as e:
         print(f"edit-config failed: {e}")

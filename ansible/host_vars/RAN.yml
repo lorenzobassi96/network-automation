@@ -1,0 +1,9 @@
+---
+# Per-device IP assignments used by 'auto' mode
+interface_ips:
+  eth0:
+    ip: "192.168.1.10"
+    prefix: 24
+  backhaul0:
+    ip: "10.0.1.1"
+    prefix: 30

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces">
+  <interface>
+    <name>eth0</name>
+    <ipv4 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip"
+          xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0"
+          nc:operation="replace">
+      <enabled>true</enabled>
+      <address>
+        <ip>192.168.1.11</ip>
+        <prefix-length>24</prefix-length>
+      </address>
+    </ipv4>
+  </interface>
+  <interface>
+    <name>backhaul0</name>
+    <ipv4 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip"
+          xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0"
+          nc:operation="replace">
+      <enabled>true</enabled>
+      <address>
+        <ip>10.0.100.1</ip>
+        <prefix-length>30</prefix-length>
+      </address>
+    </ipv4>
+  </interface>
+</interfaces>

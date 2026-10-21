@@ -1,0 +1,9 @@
+---
+# Common connection variables shared by all devices in the 'devices' group.
+# Per-host overrides (ansible_port, device_interfaces) stay in inventory.yml;
+# per-host IP assignments live in host_vars/<host>.yml.
+ansible_host: localhost
+ansible_network_os: default
+ansible_connection: netconf
+ansible_user: admin
+ansible_password: admin

@@ -1,0 +1,57 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+  <interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces">
+    <interface>
+      <name>eth0</name>
+      <description>Management interface</description>
+      <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-if-type">ianaift:ethernetCsmacd</type>
+      <enabled>true</enabled>
+      <ipv4 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip">
+        <enabled>true</enabled>
+        <address>
+          <ip>192.168.1.31</ip>
+          <prefix-length>24</prefix-length>
+        </address>
+      </ipv4>
+    </interface>
+    <interface>
+      <name>eth1</name>
+      <description>Interface to Router</description>
+      <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-if-type">ianaift:ethernetCsmacd</type>
+      <enabled>true</enabled>
+      <ipv4 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip">
+        <enabled>true</enabled>
+        <address>
+          <ip>10.0.200.2</ip>
+          <prefix-length>30</prefix-length>
+        </address>
+      </ipv4>
+    </interface>
+    <interface>
+      <name>eth2</name>
+      <description>Interface to Internet/External</description>
+      <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-if-type">ianaift:ethernetCsmacd</type>
+      <enabled>true</enabled>
+      <ipv4 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip">
+        <enabled>true</enabled>
+        <address>
+          <ip>203.0.113.1</ip>
+          <prefix-length>24</prefix-length>
+        </address>
+      </ipv4>
+    </interface>
+    <interface>
+      <name>lo0</name>
+      <description>Loopback interface</description>
+      <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-if-type">ianaift:softwareLoopback</type>
+      <enabled>true</enabled>
+      <ipv4 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip">
+        <enabled>true</enabled>
+        <address>
+          <ip>127.0.0.1</ip>
+          <prefix-length>32</prefix-length>
+        </address>
+      </ipv4>
+    </interface>
+  </interfaces>
+</data>
