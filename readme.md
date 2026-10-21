@@ -187,7 +187,37 @@ Install the above tools using your distribution's package manager or download fr
 **Install Python dependencies:**
 
 On Debian/Ubuntu and Fedora, `pip3 install --user` may fail with `externally-managed-environment` (PEP 668).
-To install system-wide anyway (skip the virtual environment), pass `--break-system-packages`:
+Choose one of the two options below.
+
+**Option A - Virtual environment (recommended):**
+
+```bash
+# Debian / Ubuntu (Fedora already ships venv with python3)
+sudo apt install -y python3-venv
+
+# Run from the repository folder
+python3 -m venv .venv
+source .venv/bin/activate
+pip install ncclient netconf-console2 paramiko ansible six
+```
+
+Run `source .venv/bin/activate` in every new shell before using the lab tools.
+
+Check that the virtual environment is active:
+```bash
+echo $VIRTUAL_ENV     # prints the .venv path when active, empty otherwise
+which python pip      # should point to .../.venv/bin/
+```
+Most shell prompts also show `(.venv)` while it is active.
+
+Deactivate the virtual environment:
+```bash
+deactivate
+```
+
+**Option B - System-wide install (skip the virtual environment):**
+
+Pass `--break-system-packages`:
 
 ```bash
 pip3 install --user --break-system-packages ncclient netconf-console2 paramiko ansible six
@@ -784,7 +814,7 @@ Activities:
 - **ncclient not installed:**
     - Run `pip3 install ncclient`.
 - **`externally-managed-environment` error when running `pip3 install`:**
-    - Debian/Ubuntu and Fedora block system-wide pip installs (PEP 668). Add `--break-system-packages` to the `pip3 install` command.
+    - Debian/Ubuntu and Fedora block system-wide pip installs (PEP 668). Use a virtual environment (see Setup, Option A) or add `--break-system-packages` to the `pip3 install` command.
 - **`command not found` for `ansible`, `netconf-console2`, etc. after `pip3 install --user`:**
     - `~/.local/bin` is not in your `PATH`. Run `echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc`.
 - **`ModuleNotFoundError: No module named 'six'` when running `netconf-console2`:**
