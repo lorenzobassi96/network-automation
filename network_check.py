@@ -59,7 +59,7 @@ class NetworkLink:
     interface1: str
     device2: str
     interface2: str
-    expected_network: str
+    expected_networks: List[str]
     description: str
 
 class NetworkConsistencyChecker:
@@ -70,34 +70,35 @@ class NetworkConsistencyChecker:
             'Core': Device('Core', 'localhost', 832, {})
         }
         
-        # Define expected network links
+        # Define expected network links. The second backhaul/transport network is the one
+        # used in the "Work with candidate" exercise.
         self.network_links = [
             NetworkLink(
                 name="Network A (RAN-Router Backhaul)",
                 device1="RAN", interface1="backhaul0",
                 device2="Router", interface2="eth1", 
-                expected_network="10.0.1.0/30",
+                expected_networks=["10.0.1.0/30", "10.0.100.0/30"],
                 description="RAN backhaul to Router"
             ),
             NetworkLink(
                 name="Network B (Router-Core)",
                 device1="Router", interface1="eth2",
                 device2="Core", interface2="eth1",
-                expected_network="10.0.2.0/30", 
+                expected_networks=["10.0.2.0/30", "10.0.200.0/30"], 
                 description="Router to Core network"
             ),
             NetworkLink(
                 name="Management Network",
                 device1="RAN", interface1="eth0",
                 device2="Router", interface2="eth0",
-                expected_network="192.168.1.0/24",
+                expected_networks=["192.168.1.0/24"],
                 description="Management network"
             ),
             NetworkLink(
                 name="Management Network (Router-Core)",
                 device1="Router", interface1="eth0", 
                 device2="Core", interface2="eth0",
-                expected_network="192.168.1.0/24",
+                expected_networks=["192.168.1.0/24"],
                 description="Management network"
             )
         ]
@@ -209,7 +210,7 @@ class NetworkConsistencyChecker:
         # Check if they're in the same network
         network1 = interface1.network
         network2 = interface2.network
-        expected_network = ipaddress.IPv4Network(link.expected_network)
+        expected_networks = [ipaddress.IPv4Network(n) for n in link.expected_networks]
         
         if not network1 or not network2:
             return "❌ ERROR", "Cannot determine network"
@@ -217,8 +218,9 @@ class NetworkConsistencyChecker:
         if network1 != network2:
             return "❌ ERROR", f"Different networks: {network1} vs {network2}"
         
-        if network1 != expected_network:
-            return "⚠️  WARNING", f"Unexpected network: {network1} (expected {expected_network})"
+        if network1 not in expected_networks:
+            expected = " or ".join(str(n) for n in expected_networks)
+            return "⚠️  WARNING", f"Unexpected network: {network1} (expected {expected})"
         
         # Check IP addresses are different (not the same IP)
         if interface1.ip_address == interface2.ip_address:

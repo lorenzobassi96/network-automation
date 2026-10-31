@@ -89,7 +89,7 @@ def main():
         print("All devices are now clean!")
     
     print("\nTo fully restore original configurations:")
-    print("sudo docker compose restart")
+    print("sudo docker compose down && sudo docker compose up -d")
 
 if __name__ == '__main__':
     main()

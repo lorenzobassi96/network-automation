@@ -289,7 +289,7 @@ N.B: It's expected that there will be errors in the network consistency check in
 ```bash
 python3 network_check.py
 ================================================================================
-🔍 Network Consistency Check - 2026-09-13 16:51:42
+🔍 Network Consistency Check - 2026-10-31 22:05:18
 ================================================================================
 📡 Device Status:
    RAN      (localhost:830): ✅ Connected - 4 interfaces
@@ -299,25 +299,26 @@ python3 network_check.py
 🔗 Network Link Status:
    Network A (RAN-Router Backhaul)     ❌ ERROR Different networks: 10.0.1.0/30 vs 10.0.10.0/30
    Network B (Router-Core)             ❌ ERROR Different networks: 10.0.200.0/30 vs 10.0.172.0/30
-   Management Network                  ❌ ERROR Different networks: 192.168.1.0/24 vs 192.168.100.0/24
-   Management Network (Router-Core)    ⚠️  WARNING Unexpected network: 192.168.100.0/24 (expected 192.168.1.0/24)
+   Management Network                  ✅ OK 192.168.1.11/24 ↔ 192.168.1.21/24
+   Management Network (Router-Core)    ✅ OK 192.168.1.21/24 ↔ 192.168.1.31/24
 
 📋 Interface Details:
    📱 RAN:
       backhaul0    🟢 10.0.1.1/30         (Backhaul to router)
-      eth0         🟢 192.168.1.10/24     (Management interface)
+      eth0         🟢 192.168.1.11/24     (Management interface)
       lo0          🟢 127.0.0.1/32        (Loopback interface)
       radio0       🟢 No IP               (5G NR radio interface)
    📱 Router:
-      eth0         🟢 192.168.100.20/24   (Management interface)
+      eth0         🟢 192.168.1.21/24     (Management interface)
       eth1         🟢 10.0.10.2/30        (Interface to RAN)
       eth2         🟢 10.0.200.1/30       (Interface to Core)
       lo0          🟢 127.0.0.1/32        (Loopback interface)
    📱 Core:
-      eth0         🟢 192.168.100.30/24   (Management interface)
+      eth0         🟢 192.168.1.31/24     (Management interface)
       eth1         🟢 10.0.172.2/30       (Interface to Router)
       eth2         🟢 203.0.113.1/24      (Interface to Internet/External)
       lo0          🟢 127.0.0.1/32        (Loopback interface)
+
 ```
 
 ## Exercise 1
@@ -512,53 +513,50 @@ Check network consistency with the provided script:
 ```bash
  python3 network_check.py
 ================================================================================
-🔍 Network Consistency Check - 2026-09-13 17:31:02
+🔍 Network Consistency Check - 2026-10-31 21:53:48
 ================================================================================
+
 📡 Device Status:
    RAN      (localhost:830): ✅ Connected - 4 interfaces
    Router   (localhost:831): ✅ Connected - 4 interfaces
    Core     (localhost:832): ✅ Connected - 4 interfaces
 
 🔗 Network Link Status:
-   Network A (RAN-Router Backhaul)     ✅ OK 10.0.1.1/30 ↔ 10.0.1.2/30
-   Network B (Router-Core)             ✅ OK 10.0.2.1/30 ↔ 10.0.2.2/30
-   Management Network                  ✅ OK 192.168.1.10/24 ↔ 192.168.1.20/24
-   Management Network (Router-Core)    ✅ OK 192.168.1.20/24 ↔ 192.168.1.30/24
+   Network A (RAN-Router Backhaul)     ❌ ERROR Different networks: 10.0.1.0/30 vs 10.0.10.0/30
+   Network B (Router-Core)             ❌ ERROR Different networks: 10.0.200.0/30 vs 10.0.172.0/30
+   Management Network                  ⚠️   WARNING Unexpected network: 192.168.100.0/24 (expected 192.168.1.0/24)
+   Management Network (Router-Core)    ⚠️   WARNING Unexpected network: 192.168.100.0/24 (expected 192.168.1.0/24)
 
 📋 Interface Details:
    📱 RAN:
       backhaul0    🟢 10.0.1.1/30         (Backhaul to router)
-      eth0         🟢 192.168.1.10/24     (Management interface)
+      eth0         🟢 192.168.100.10/24   (Management interface)
       lo0          🟢 127.0.0.1/32        (Loopback interface)
       radio0       🟢 No IP               (5G NR radio interface)
    📱 Router:
-      eth0         🟢 192.168.1.20/24     (Management interface)
-      eth1         🟢 10.0.1.2/30         (Interface to RAN)
-      eth2         🟢 10.0.2.1/30         (Interface to Core)
+      eth0         🟢 192.168.100.20/24   (Management interface)
+      eth1         🟢 10.0.10.2/30        (Interface to RAN)
+      eth2         🟢 10.0.200.1/30       (Interface to Core)
       lo0          🟢 127.0.0.1/32        (Loopback interface)
    📱 Core:
-      eth0         🟢 192.168.1.30/24     (Management interface)
-      eth1         🟢 10.0.2.2/30         (Interface to Router)
+      eth0         🟢 192.168.100.30/24   (Management interface)
+      eth1         🟢 10.0.172.2/30       (Interface to Router)
       eth2         🟢 203.0.113.1/24      (Interface to Internet/External)
       lo0          🟢 127.0.0.1/32        (Loopback interface)
+
 ```
 
 #### Answers to the activities questions
 
 **Would the current configuration allow the system to work properly?**
-Not yet. The `edit-config` operations were applied only to the *candidate* datastore. The device actually runs from the *running* datastore, which still holds the previous configuration. The new addresses (192.168.1.x/24, 10.0.100.0/30, 10.0.200.0/30) become active only after a *commit* (candidate → running).
 
 **Are there differences between the datastores? Why?**
-Yes. After editing the candidate we have `candidate ≠ running` (and `≠ startup`). This is expected: `edit-config` towards *candidate* does not touch *running* or *startup*. The candidate is a scratch/working copy that stays divergent until a *commit* copies it into *running*, and a *copy-config* copies *running* into *startup*.
 
 **What would happen if a device gets restarted in such a case?**
-On restart the device loads *startup* into *running*. Since the candidate was never committed, every edit is lost and the device comes back with the old *startup* configuration. The candidate content is discarded.
 
 **What would happen to the network if the BBU `backhaul0` did not match Router `eth1`? Was there any check available to prevent it?**
-The backhaul link would break: the two ends would sit in different subnets, so there would be no L3 connectivity between RAN and Router. NETCONF/YANG validation is *per-device* — each node only validates its own configuration against its models, so this cross-device mismatch is **not** caught automatically. This is exactly why the external `network_check.py` script exists: it verifies end-to-end consistency across all three devices.
 
 **How does this approach scale (100 RAN + 50 Router + 1 Core)?**
-It does not scale well. Configuring devices one by one with `netconf-console2` is an O(N) manual effort: 151 devices would require 151 × (edit-config + verification), which is slow and error-prone. This is the motivation for automation — Python/`ncclient` (Exercise 2) and Ansible (Exercise 3) — where the same logic loops over an inventory and applies the changes consistently to every device.
 
 ### Bonus
 
@@ -670,10 +668,11 @@ diff exercise1/core-startup-bonus-after-copy.xml   exercise1/core-candidate-bonu
 
 ## Exercise 2 - Automate with Python
 
-Start by restarting the system with 
+Start from a clean lab. A plain `docker compose restart` keeps the configuration saved in the previous run, so recreate the containers with
 
 ```bash
-sudo docker compose restart
+sudo docker compose down
+sudo docker compose up -d
 ```
 
 Create a python script that makes use of [ncclient](https://pypi.org/project/ncclient/) to perform the following: 
@@ -694,10 +693,11 @@ Activities:
 
 ## Exercise 3 - Automate with Ansible
 
-Start by restarting the system with 
+Start from a clean lab. A plain `docker compose restart` keeps the configuration saved in the previous run, so recreate the containers with
 
 ```bash
-sudo docker compose restart
+sudo docker compose down
+sudo docker compose up -d
 ```
 
 1. Look at the files inside *ansible* folder
@@ -719,10 +719,11 @@ Activities:
 
 ## Assignment 
 
-Start by restarting the system with 
+Start from a clean lab. A plain `docker compose restart` keeps the configuration saved in the previous run, so recreate the containers with
 
 ```bash
-sudo docker compose restart
+sudo docker compose down
+sudo docker compose up -d
 ```
 
 Create a python script that makes use of [ncclient](https://pypi.org/project/ncclient/) to perform the following tasks. Feel free to reuse any code already available while making sure to comment the different functions. 
