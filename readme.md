@@ -130,7 +130,7 @@ Rootful mode avoids the rootless low-port (830/831/832) binding limitations.
 
 Install Docker directly inside your WSL distribution using Docker's official repository.
 
-**Debian / Ubuntu (APT):**
+**Only with Debian / Ubuntu (APT):**
 
 ```bash
 # Debian / Ubuntu
@@ -153,7 +153,7 @@ sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin d
 
 > On Ubuntu, replace `linux/debian` with `linux/ubuntu` in the two URLs above.
 
-**Fedora (DNF):**
+**Only with Fedora (DNF):**
 
 ```bash
 # Fedora
@@ -251,10 +251,9 @@ netconf-console2 --help  # should print help if installed
 ```
 
 ### 5. Start the Lab Environment
-################################################### To Be changed later when repo is ready
-Download the repo:
+Download the 2026 edition of the repo:
 ```bash
-git clone https://github.com/unusualfor/network-automation.git
+git clone --branch course/2026 https://github.com/lorenzobassi96/network-automation.git
 cd network-automation/
 ```
 
@@ -333,82 +332,26 @@ netconf-console2 --host localhost --port 831 --user admin --password admin --db 
 netconf-console2 --host localhost --port 832 --user admin --password admin --db running --get-config
 ```
 
-Save the initial configuration of the devices to XML files for later reference:
+Save the initial configuration of the devices to XML files for later reference. All the output files of this exercise are saved in the *exercise1* folder, which is ignored by Git (see *.gitignore*):
 ```bash
-netconf-console2 --host localhost --port 830 --user admin --password admin --db running --get-config > ran-device-config.xml
-netconf-console2 --host localhost --port 831 --user admin --password admin --db running --get-config > router-device-config.xml
-netconf-console2 --host localhost --port 832 --user admin --password admin --db running --get-config > core-device-config.xml
+mkdir -p exercise1
 
-netconf-console2 --host localhost --port 830 --user admin --password admin --db running --get-config -x /interfaces/interface > ran-interfaces-before-change.xml
-netconf-console2 --host localhost --port 831 --user admin --password admin --db running --get-config -x /interfaces/interface > router-interfaces-before-change.xml
-netconf-console2 --host localhost --port 832 --user admin --password admin --db running --get-config -x /interfaces/interface > core-interfaces-before-change.xml
+netconf-console2 --host localhost --port 830 --user admin --password admin --db running --get-config > exercise1/ran-device-config.xml
+netconf-console2 --host localhost --port 831 --user admin --password admin --db running --get-config > exercise1/router-device-config.xml
+netconf-console2 --host localhost --port 832 --user admin --password admin --db running --get-config > exercise1/core-device-config.xml
+
+netconf-console2 --host localhost --port 830 --user admin --password admin --db running --get-config -x /interfaces/interface > exercise1/ran-interfaces-before-change.xml
+netconf-console2 --host localhost --port 831 --user admin --password admin --db running --get-config -x /interfaces/interface > exercise1/router-interfaces-before-change.xml
+netconf-console2 --host localhost --port 832 --user admin --password admin --db running --get-config -x /interfaces/interface > exercise1/core-interfaces-before-change.xml
 ```
 
+Compare the saved configurations of the components (RAN, Router and Core) with `diff` to see their actual differences. `-y` shows the files side by side and `--suppress-common-lines` hides identical lines, so only the differing ones remain:
 ```bash
-diff ran-device-config.xml router-device-config.xml -y --suppress-common-lines
-      <name>backhaul0</name>                                  |       <name>eth0</name>
-      <description>Backhaul to router</description>           |       <description>Management interface</description>
-          <ip>10.0.1.1</ip>                                   |           <ip>192.168.100.20</ip>
-                                                              >           <prefix-length>24</prefix-length>
-                                                              >         </address>
-                                                              >       </ipv4>
-                                                              >     </interface>
-                                                              >     <interface>
-                                                              >       <name>eth1</name>
-                                                              >       <description>Interface to RAN</description>
-                                                              >       <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-i
-                                                              >       <enabled>true</enabled>
-                                                              >       <ipv4 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip">
-                                                              >         <enabled>true</enabled>
-                                                              >         <address>
-                                                              >           <ip>10.0.10.2</ip>
-      <name>eth0</name>                                       |       <name>eth2</name>
-      <description>Management interface</description>         |       <description>Interface to Core</description>
-          <ip>192.168.100.10</ip>                             |           <ip>10.0.200.1</ip>
-          <prefix-length>24</prefix-length>                   |           <prefix-length>30</prefix-length>
-    </interface>                                              <
-    <interface>                                               <
-      <name>radio0</name>                                     <
-      <description>5G NR radio interface</description>        <
-      <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-i <
-      <enabled>true</enabled>                                 <
+diff exercise1/ran-device-config.xml exercise1/router-device-config.xml -y --suppress-common-lines
 
+diff exercise1/router-device-config.xml exercise1/core-device-config.xml -y --suppress-common-lines
 
-diff router-device-config.xml core-device-config.xml -y --suppress-common-lines
-          <ip>192.168.100.20</ip>                             |           <ip>192.168.100.30</ip>
-      <description>Interface to RAN</description>             |       <description>Interface to Router</description>
-          <ip>10.0.10.2</ip>                                  |           <ip>10.0.172.2</ip>
-      <description>Interface to Core</description>            |       <description>Interface to Internet/External</descriptio
-          <ip>10.0.200.1</ip>                                 |           <ip>203.0.113.1</ip>
-          <prefix-length>30</prefix-length>                   |           <prefix-length>24</prefix-length>
-
-
-
-diff ran-device-config.xml core-device-config.xml -y --suppress-common-lines
-      <name>backhaul0</name>                                  |       <name>eth0</name>
-      <description>Backhaul to router</description>           |       <description>Management interface</description>
-          <ip>10.0.1.1</ip>                                   |           <ip>192.168.100.30</ip>
-                                                              >           <prefix-length>24</prefix-length>
-                                                              >         </address>
-                                                              >       </ipv4>
-                                                              >     </interface>
-                                                              >     <interface>
-                                                              >       <name>eth1</name>                                                                                           >       <description>Interface to Router</description>
-                                                              >       <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-i
-                                                              >       <enabled>true</enabled>
-                                                              >       <ipv4 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip">
-                                                              >         <enabled>true</enabled>
-                                                              >         <address>
-                                                              >           <ip>10.0.172.2</ip>
-      <name>eth0</name>                                       |       <name>eth2</name>
-      <description>Management interface</description>         |       <description>Interface to Internet/External</descriptio
-          <ip>192.168.100.10</ip>                             |           <ip>203.0.113.1</ip>
-    </interface>                                              <
-    <interface>                                               <
-      <name>radio0</name>                                     <
-      <description>5G NR radio interface</description>        <
-      <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-i <
-      <enabled>true</enabled>                                 <
+diff exercise1/ran-device-config.xml exercise1/core-device-config.xml -y --suppress-common-lines
 ```
 
 ### Modify running datastore
@@ -427,6 +370,7 @@ Activities:
                 * What would happen to the network if the configuration applied to BBU backhaul0 was not matching the network configuration applied to Router eth1? Was there any check available to prevent this?
                 * Further checks: check that the three devices have consistent IP addresses with the *network-check.py* script and, in case not, modify IP addresses again
 
+Create one XML file per device (e.g. *operations/exercise1-running-ran.xml*, *operations/exercise1-running-router.xml* and *operations/exercise1-running-core.xml*) starting from *operations/change-eth0.xml*, then apply them to the *running* datastore:
 ```bash
 netconf-console2 --host localhost --port 830 --user admin --password admin --db running --edit-config operations/exercise1-running-ran.xml
 netconf-console2 --host localhost --port 831 --user admin --password admin --db running --edit-config operations/exercise1-running-router.xml
@@ -434,13 +378,13 @@ netconf-console2 --host localhost --port 832 --user admin --password admin --db 
 ```
 Check differences between the configurations:
 ```bash
-netconf-console2 --host localhost --port 830 --user admin --password admin --db running --get-config -x /interfaces/interface > ran-interfaces-after-change.xml
-netconf-console2 --host localhost --port 831 --user admin --password admin --db running --get-config -x /interfaces/interface > router-interfaces-after-change.xml
-netconf-console2 --host localhost --port 832 --user admin --password admin --db running --get-config -x /interfaces/interface > core-interfaces-after-change.xml
+netconf-console2 --host localhost --port 830 --user admin --password admin --db running --get-config -x /interfaces/interface > exercise1/ran-interfaces-after-change.xml
+netconf-console2 --host localhost --port 831 --user admin --password admin --db running --get-config -x /interfaces/interface > exercise1/router-interfaces-after-change.xml
+netconf-console2 --host localhost --port 832 --user admin --password admin --db running --get-config -x /interfaces/interface > exercise1/core-interfaces-after-change.xml
 
-diff ran-interfaces-before-change.xml ran-interfaces-after-change.xml
-diff router-interfaces-before-change.xml router-interfaces-after-change.xml
-diff core-interfaces-before-change.xml core-interfaces-after-change.xml
+diff exercise1/ran-interfaces-before-change.xml exercise1/ran-interfaces-after-change.xml
+diff exercise1/router-interfaces-before-change.xml exercise1/router-interfaces-after-change.xml
+diff exercise1/core-interfaces-before-change.xml exercise1/core-interfaces-after-change.xml
 ```
 
 Check *running*, *startup* and *candidate* datastores for each device and save the output into the *exercise1* folder:
@@ -532,7 +476,7 @@ Activities:
 * How does this approach scale? What is the impact in terms of time spent if we have to manage 100 RAN devices, 50 router devices and 1 core network device?
 * Further checks: check that the three devices have consistent IP addresses with the *network-check.py* script and, in case not, modify IP addresses again
 
-Apply the changes to the *candidate* datastore (the *running* datastore is not affected until a *commit*):
+Create one XML file per device (e.g. *operations/exercise1-candidate-ran.xml*, *operations/exercise1-candidate-router.xml* and *operations/exercise1-candidate-core.xml*) and apply the changes to the *candidate* datastore (the *running* datastore is not affected until a *commit*):
 ```bash
 netconf-console2 --host localhost --port 830 --user admin --password admin --db candidate --edit-config operations/exercise1-candidate-ran.xml
 netconf-console2 --host localhost --port 831 --user admin --password admin --db candidate --edit-config operations/exercise1-candidate-router.xml
