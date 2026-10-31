@@ -680,7 +680,7 @@ Create a python script that makes use of [ncclient](https://pypi.org/project/ncc
 2. Use *edit-config* towards the *running* datastore and modify eth0 IPv4 address values to be consistently in 192.168.1.0/24
 3. Check the devices with *get-config* and ensure all eth0 interfaces are correctly configured to be in 192.168.1.0/24
 
-**Tip:** See `exercise2_baseline.py` for a starting point and `exercise2_solution.py` for a complete example.
+**Tip:** See `exercise2_baseline.py` for a starting point.
 
 
 #### Success Criteria
