@@ -43,15 +43,35 @@ pip install ncclient
 ```
 
 ### For Ansible Playbook:
+Install everything **before** running the playbook. Run these commands from the `ansible/` directory (the one containing `ansible.cfg`, `requirements.txt` and `requirements.yml`):
 ```bash
-pip install ansible ansible-netcommon
-ansible-galaxy collection install ansible.netcommon
+cd ansible
 
-# Python libraries used by the NETCONF modules:
-#   ncclient  -> NETCONF transport
-#   jxmlease  -> required by `display: json` to parse device output into a dict
-pip install ncclient jxmlease
+# 1. Ansible itself
+pip install ansible
+
+# 2. Python libraries used by the NETCONF modules
+#    ncclient  -> NETCONF transport
+#    jxmlease  -> required by `display: json` to parse device output into a dict
+#    lxml, paramiko -> XML handling and SSH
+pip install -r requirements.txt
+
+# 3. Ansible collections (ansible.netcommon provides netconf_get / netconf_config)
+ansible-galaxy collection install -r requirements.yml
 ```
+
+Check that the tools are available:
+```bash
+ansible --version
+python3 -c "import ncclient, jxmlease, lxml, paramiko; print('Python libraries OK')"
+ansible-galaxy collection list | grep -E "ansible.netcommon|ansible.posix"
+```
+
+> If you use a virtual environment (for example `.venv` in the repository root), activate it first
+> (`source ../.venv/bin/activate`) so that `ansible-playbook` and the libraries use the same Python.
+
+> Always run `ansible-playbook` from the `ansible/` directory: `ansible.cfg` is read only from the
+> current directory. Otherwise the NETCONF connection fails with `Unknown host key`.
 
 ## 🎯 Educational Highlights
 

@@ -513,7 +513,7 @@ Check network consistency with the provided script:
 ```bash
  python3 network_check.py
 ================================================================================
-🔍 Network Consistency Check - 2026-10-31 21:53:48
+🔍 Network Consistency Check
 ================================================================================
 
 📡 Device Status:
@@ -623,6 +623,22 @@ diff exercise1/router-startup-bonus-after-commit.xml exercise1/router-running-bo
 diff exercise1/core-running-bonus-after-commit.xml   exercise1/core-candidate-bonus-after-commit.xml
 diff exercise1/core-startup-bonus-after-commit.xml   exercise1/core-running-bonus-after-commit.xml
 ```
+
+Now that the *candidate* has been committed to *running*, check again the consistency of the addresses with the provided script. Compare the interfaces on both ends of each link: they must now be in the same network, and every link must be reported as OK:
+```bash
+python3 network_check.py
+```
+
+Expected result (the addresses shown depend on the values you configured):
+```text
+🔗 Network Link Status:
+   Network A (RAN-Router Backhaul)     ✅ OK <RAN backhaul0 address> ↔ <Router eth1 address>
+   Network B (Router-Core)             ✅ OK <Router eth2 address> ↔ <Core eth1 address>
+   Management Network                  ✅ OK <RAN eth0 address> ↔ <Router eth0 address>
+   Management Network (Router-Core)    ✅ OK <Router eth0 address> ↔ <Core eth0 address>
+```
+
+If a link is reported as ❌ ERROR or ⚠️ WARNING, the two ends are not aligned: check the addresses with *--get-config* and fix the configuration before moving on.
 
 2. Perform a copy-config operation with with *netconf-console2* so that the *running* datastore gets committed to the *startup* and perform above checks again
 * Check with *netconf-console2* with *--get-config*, towards *running*, *startup* and *candidate*
