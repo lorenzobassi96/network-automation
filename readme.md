@@ -373,9 +373,9 @@ Activities:
 
 Create one XML file per device (e.g. *operations/exercise1-running-ran.xml*, *operations/exercise1-running-router.xml* and *operations/exercise1-running-core.xml*) starting from *operations/change-eth0.xml*, then apply them to the *running* datastore:
 ```bash
-netconf-console2 --host localhost --port 830 --user admin --password admin --db running --edit-config operations/exercise1-running-ran.xml
-netconf-console2 --host localhost --port 831 --user admin --password admin --db running --edit-config operations/exercise1-running-router.xml
-netconf-console2 --host localhost --port 832 --user admin --password admin --db running --edit-config operations/exercise1-running-core.xml
+netconf-console2 --host localhost --port 830 --user admin --password admin --db running --edit-config exercise1/exercise1-running-ran.xml
+netconf-console2 --host localhost --port 831 --user admin --password admin --db running --edit-config exercise1/exercise1-running-router.xml
+netconf-console2 --host localhost --port 832 --user admin --password admin --db running --edit-config exercise1/exercise1-running-core.xml
 ```
 Check differences between the configurations:
 ```bash

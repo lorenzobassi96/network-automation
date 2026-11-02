@@ -1,4 +1,4 @@
-# Python dependencies for the NETCONF execution environment
+# Python dependencies for the NETCONF playbook
 ncclient>=0.6.13
 jxmlease>=1.0.3
 lxml>=4.9.0
