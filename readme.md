@@ -123,6 +123,14 @@ You need the following tools installed on your system (any Linux distribution, i
 - **Ansible**
 - **Python packages:** `ncclient`, `netconf-console2`, `paramiko`
 
+**Fedora only (SELinux):** Before starting the lab, run:
+
+```bash
+sudo setenforce 0 || true
+```
+
+This temporarily puts SELinux in permissive mode until it is re-enabled or the system reboots. It reduces host security; restore enforcement with `sudo setenforce 1` when the test is complete.
+
 
 **For WSL users:**
 This lab runs with **Docker in rootful mode** (all `docker` commands are executed with `sudo`).
@@ -786,6 +794,8 @@ Activities:
     - Check your inventory and playbook syntax.
 - **IP address not updated:**
     - Verify your XML payload and device YANG model compatibility.
+- **Possible SELinux-related Docker issues (Fedora):**
+    - As a temporary diagnostic test, run `sudo setenforce 0 || true` and retry the operation. If this resolves the issue, restore enforcement with `sudo setenforce 1` and investigate the relevant SELinux policy or container labels. Do not leave SELinux in permissive mode as a permanent workaround.
 
 If you encounter other issues, check the logs or ask your instructor for help.
 
