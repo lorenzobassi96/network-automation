@@ -5,8 +5,8 @@ services:
     ports:
       - "830:830"
     volumes:
-      - ./yang-models/common:/yang-modules:rw
-      - ./yang-models/ran/startup:/yang-modules/startup:ro
+      - ./yang-models/common:/yang-modules:rw,z
+      - ./yang-models/ran/startup:/yang-modules/startup:ro,z
     environment:
       - DEVICE_TYPE=ran
       - DEVICE_NAME=ran-device
@@ -20,8 +20,8 @@ services:
     ports:
       - "831:830"
     volumes:
-      - ./yang-models/common:/yang-modules:rw
-      - ./yang-models/router/startup:/yang-modules/startup:ro
+      - ./yang-models/common:/yang-modules:rw,z
+      - ./yang-models/router/startup:/yang-modules/startup:ro,z
     environment:
       - DEVICE_TYPE=router
       - DEVICE_NAME=router-device
@@ -35,8 +35,8 @@ services:
     ports:
       - "832:830"
     volumes:
-      - ./yang-models/common:/yang-modules:rw
-      - ./yang-models/core/startup:/yang-modules/startup:ro
+      - ./yang-models/common:/yang-modules:rw,z
+      - ./yang-models/core/startup:/yang-modules/startup:ro,z
     environment:
       - DEVICE_TYPE=core
       - DEVICE_NAME=core-device
